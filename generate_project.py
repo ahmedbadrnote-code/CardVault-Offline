@@ -50,8 +50,8 @@ android {
         applicationId = "com.secure.cardvault"
         minSdk = 26
         targetSdk = 34
-        versionCode = 5
-        versionName = "4.0.0"
+        versionCode = 6
+        versionName = "4.1.0"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -1005,7 +1005,6 @@ fun UltraLuxury3DBankCard(
             // Precision Laser-Engraved Guilloche Circles & Metallic Sheen Overlay
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val patternColor = if (isInverted) Color.Black.copy(alpha = 0.035f) else Color.White.copy(alpha = 0.035f)
-                // Concentric bank-grade guilloche rings on the right side
                 for (r in 1..9) {
                     drawCircle(
                         color = patternColor,
@@ -1014,7 +1013,6 @@ fun UltraLuxury3DBankCard(
                         style = Stroke(width = 1.2f)
                     )
                 }
-                // Diagonal metallic light reflection
                 val sheenPath = Path().apply {
                     moveTo(0f, size.height * 0.35f)
                     lineTo(size.width * 0.65f, 0f)
@@ -1106,7 +1104,7 @@ fun UltraLuxury3DBankCard(
                         )
                     }
 
-                    // THIRD ROW: 4 evenly spaced embossed digit groups + micro-BIN under first group
+                    // THIRD ROW: 4 evenly spaced embossed digit groups + micro-BIN
                     Column {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -1144,13 +1142,20 @@ fun UltraLuxury3DBankCard(
                                 horizontalArrangement = Arrangement.spacedBy(24.dp)
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = "VALID\nTHRU",
-                                        color = subColor,
-                                        fontSize = 6.sp,
-                                        lineHeight = 7.sp,
-                                        letterSpacing = 0.8.sp
-                                    )
+                                    Column {
+                                        Text(
+                                            text = "VALID",
+                                            color = subColor,
+                                            fontSize = 6.sp,
+                                            letterSpacing = 0.8.sp
+                                        )
+                                        Text(
+                                            text = "THRU",
+                                            color = subColor,
+                                            fontSize = 6.sp,
+                                            letterSpacing = 0.8.sp
+                                        )
+                                    }
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
                                         text = card.expiryDate,
@@ -1224,7 +1229,6 @@ fun UltraLuxury3DBankCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        // Hatched Signature Panel + CVV Box
                         Row(
                             modifier = Modifier.weight(1f),
                             verticalAlignment = Alignment.CenterVertically
@@ -1472,7 +1476,7 @@ fun UltraLuxury3DBankCard(
     }
 }
 
-// ==================== ADD & EDIT CARD DIALOG WITH AUTO-BRAND & LUHN RADAR ====================
+// ==================== ADD & EDIT CARD DIALOG WITH TOUCH CHIPS & RADAR ====================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1604,29 +1608,36 @@ fun CardFormDialog(
                     singleLine = true
                 )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = brand,
-                        onValueChange = { brand = it },
-                        label = { Text("Brand (Auto/Manual)") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = cardType,
-                        onValueChange = { cardType = it },
-                        label = { Text("Type (Credit/Debit)") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                }
-
                 OutlinedTextField(
-                    value = themeContrast,
-                    onValueChange = { themeContrast = it },
-                    label = { Text("Card Finish (Pitch Black / Crisp White)") },
+                    value = brand,
+                    onValueChange = { brand = it },
+                    label = { Text("Brand (Auto-filled or Custom)") },
                     singleLine = true
                 )
+
+                // Touch Selector for Card Type (Credit / Debit / Prepaid)
+                Text("Card Type:", color = MutedWhite, fontSize = 11.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("Credit", "Debit", "Prepaid").forEach { typeOption ->
+                        FilterChip(
+                            selected = cardType.equals(typeOption, ignoreCase = true),
+                            onClick = { cardType = typeOption },
+                            label = { Text(typeOption, fontSize = 11.sp) }
+                        )
+                    }
+                }
+
+                // Touch Selector for Card Finish (Pitch Black / Crisp White)
+                Text("Card Metal Finish:", color = MutedWhite, fontSize = 11.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("Pitch Black", "Crisp White").forEach { styleOption ->
+                        FilterChip(
+                            selected = themeContrast.equals(styleOption, ignoreCase = true),
+                            onClick = { themeContrast = styleOption },
+                            label = { Text(styleOption, fontSize = 11.sp) }
+                        )
+                    }
+                }
 
                 OutlinedTextField(
                     value = notes,
@@ -1685,4 +1696,4 @@ for path, content in files.items():
     with open(path, "w", encoding="utf-8") as f:
         f.write(content)
 
-print("CardVault Offline v4.0 (Ultra-Luxury 3D Flip Card Edition) Generated Successfully!")
+print("CardVault Offline v4.1 (Fixed Build & Touch Chips Edition) Generated Successfully!")
