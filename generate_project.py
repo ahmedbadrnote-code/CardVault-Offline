@@ -50,8 +50,8 @@ android {
         applicationId = "com.secure.cardvault"
         minSdk = 26
         targetSdk = 34
-        versionCode = 3
-        versionName = "2.0.0"
+        versionCode = 4
+        versionName = "3.0.0"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -231,10 +231,10 @@ data class CardEntity(
     val iban: String,
     val expiryDate: String,
     val cvv: String,
+    val atmPin: String,       // Encrypted 4-6 digit ATM PIN (replaces Due Day)
     val cardType: String,     // Credit, Debit, Prepaid
-    val brand: String,        // Visa, Mastercard, Amex, Meeza
-    val themeContrast: String,// Pitch Black, Crisp White, Carbon Metal
-    val billingDueDay: Int,   // 1-31
+    val brand: String,        // Auto-detected or custom: Visa, Mastercard, Meeza, Amex
+    val themeContrast: String,// Pitch Black, Crisp White
     val notes: String
 )
 """,
@@ -250,7 +250,7 @@ interface CardDao {
     fun getAllCards(): Flow<List<CardEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertCard(card: CardEntity)
+    suspend fun insertOrUpdateCard(card: CardEntity)
 
     @Delete
     suspend fun deleteCard(card: CardEntity)
@@ -269,7 +269,7 @@ import androidx.security.crypto.MasterKey
 import net.sqlcipher.database.SupportFactory
 import java.security.SecureRandom
 
-@Database(entities = [CardEntity::class], version = 1, exportSchema = false)
+@Database(entities = [CardEntity::class], version = 2, exportSchema = false)
 abstract class VaultDatabase : RoomDatabase() {
     abstract fun cardDao(): CardDao
 
@@ -444,8 +444,8 @@ class MainActivity : AppCompatActivity() {
                         val cards by dao.getAllCards().collectAsState(initial = emptyList())
                         VaultAppScreen(
                             cards = cards,
-                            onSaveCard = { card ->
-                                lifecycleScope.launch { dao.insertCard(card) }
+                            onSaveOrUpdateCard = { card ->
+                                lifecycleScope.launch { dao.insertOrUpdateCard(card) }
                             },
                             onDeleteCard = { card ->
                                 lifecycleScope.launch { dao.deleteCard(card) }
@@ -502,6 +502,41 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
+// ==================== AUTO-BRAND RADAR & LUHN CHECKSUM VALIDATOR ====================
+
+fun detectCardBrandAutomatically(digits: String): String {
+    val clean = digits.filter { it.isDigit() }
+    if (clean.isEmpty()) return ""
+    val p2 = clean.take(2).toIntOrNull() ?: 0
+    val p4 = clean.take(4).toIntOrNull() ?: 0
+
+    return when {
+        clean.startsWith("4") -> "Visa"
+        clean.startsWith("5078") || clean.startsWith("5079") -> "Meeza"
+        p2 in 51..55 || p4 in 2221..2720 -> "Mastercard"
+        clean.startsWith("34") || clean.startsWith("37") -> "Amex"
+        clean.startsWith("6011") || clean.startsWith("65") -> "Discover"
+        else -> ""
+    }
+}
+
+fun isValidLuhnNumber(digits: String): Boolean {
+    val clean = digits.filter { it.isDigit() }
+    if (clean.length < 13) return false
+    var sum = 0
+    var alternate = false
+    for (i in clean.length - 1 downTo 0) {
+        var n = clean[i] - '0'
+        if (alternate) {
+            n *= 2
+            if (n > 9) n -= 9
+        }
+        sum += n
+        alternate = !alternate
+    }
+    return (sum % 10 == 0)
+}
+
 @Composable
 fun LockedScreen(onUnlockRequest: () -> Unit) {
     Column(
@@ -550,13 +585,15 @@ fun LockedScreen(onUnlockRequest: () -> Unit) {
 @Composable
 fun VaultAppScreen(
     cards: List<CardEntity>,
-    onSaveCard: (CardEntity) -> Unit,
+    onSaveOrUpdateCard: (CardEntity) -> Unit,
     onDeleteCard: (CardEntity) -> Unit
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    var showAddDialog by remember { mutableStateOf(false) }
+
+    var showCardDialog by remember { mutableStateOf(false) }
+    var cardBeingEdited by remember { mutableStateOf<CardEntity?>(null) }
 
     Scaffold(
         containerColor = PitchBlack,
@@ -588,7 +625,10 @@ fun VaultAppScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showAddDialog = true },
+                onClick = {
+                    cardBeingEdited = null
+                    showCardDialog = true
+                },
                 containerColor = CrispWhite,
                 contentColor = PitchBlack,
                 shape = RoundedCornerShape(14.dp)
@@ -633,18 +673,31 @@ fun VaultAppScreen(
                                 snackbarHostState.showSnackbar("$label copied to clipboard")
                             }
                         },
+                        onEdit = {
+                            cardBeingEdited = card
+                            showCardDialog = true
+                        },
                         onDelete = { onDeleteCard(card) }
                     )
                 }
             }
         }
 
-        if (showAddDialog) {
-            AddCardDialog(
-                onDismiss = { showAddDialog = false },
-                onSave = { newCard ->
-                    onSaveCard(newCard)
-                    showAddDialog = false
+        if (showCardDialog) {
+            CardFormDialog(
+                existingCard = cardBeingEdited,
+                onDismiss = {
+                    showCardDialog = false
+                    cardBeingEdited = null
+                },
+                onSave = { savedCard ->
+                    onSaveOrUpdateCard(savedCard)
+                    val msg = if (cardBeingEdited != null) "Card updated successfully" else "Card added to vault"
+                    showCardDialog = false
+                    cardBeingEdited = null
+                    scope.launch {
+                        snackbarHostState.showSnackbar(msg)
+                    }
                 }
             )
         }
@@ -676,13 +729,10 @@ fun RealisticEmvChip(isInverted: Boolean) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-            // Horizontal circuit lines
             drawLine(lineColor, Offset(0f, h * 0.33f), Offset(w, h * 0.33f), strokeWidth = 1.5f)
             drawLine(lineColor, Offset(0f, h * 0.66f), Offset(w, h * 0.66f), strokeWidth = 1.5f)
-            // Vertical circuit lines
             drawLine(lineColor, Offset(w * 0.32f, 0f), Offset(w * 0.32f, h), strokeWidth = 1.5f)
             drawLine(lineColor, Offset(w * 0.68f, 0f), Offset(w * 0.68f, h), strokeWidth = 1.5f)
-            // Center Contact Pad
             drawRoundRect(
                 color = lineColor,
                 topLeft = Offset(w * 0.32f, h * 0.25f),
@@ -746,6 +796,22 @@ fun CardBrandLogo(brand: String, contentColor: Color) {
                 letterSpacing = 1.sp
             )
         }
+        cleanBrand.contains("meeza") -> {
+            Surface(
+                color = contentColor.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(6.dp),
+                border = BorderStroke(1.dp, contentColor)
+            ) {
+                Text(
+                    text = "MEEZA",
+                    color = contentColor,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 1.5.sp,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                )
+            }
+        }
         else -> {
             Text(
                 text = brand.uppercase(),
@@ -764,12 +830,12 @@ fun CardBrandLogo(brand: String, contentColor: Color) {
 fun RealisticBankCardItem(
     card: CardEntity,
     onCopy: (String, String) -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     var revealed by remember { mutableStateOf(false) }
 
     val formattedNumber = remember(card.cardNumber, revealed) {
-        val clean = card.cardNumber.replace(" ", "").padEnd(16, '•')
         if (revealed) {
             card.cardNumber.replace(" ", "").chunked(4).joinToString("   ")
         } else {
@@ -778,6 +844,7 @@ fun RealisticBankCardItem(
         }
     }
 
+    val isLuhnValid = remember(card.cardNumber) { isValidLuhnNumber(card.cardNumber) }
     val isInverted = card.themeContrast.equals("Crisp White", ignoreCase = true)
 
     val cardBrush = if (isInverted) {
@@ -890,7 +957,7 @@ fun RealisticBankCardItem(
                     }
                 }
 
-                // MIDDLE ROW: Realistic EMV Chip + Contactless NFC Icon
+                // MIDDLE ROW: Realistic EMV Chip + Contactless NFC Icon + Luhn Badge
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -902,9 +969,8 @@ fun RealisticBankCardItem(
                         ContactlessNfcIcon(tint = contentColor)
                     }
 
-                    // Due Day Pill
                     Text(
-                        text = "BILLING DAY: ${card.billingDueDay}",
+                        text = if (isLuhnValid) "✓ VERIFIED" else "CUSTOM NO.",
                         color = subColor,
                         fontSize = 9.sp,
                         fontFamily = FontFamily.Monospace,
@@ -922,14 +988,14 @@ fun RealisticBankCardItem(
                     maxLines = 1
                 )
 
-                // BOTTOM ROW: Cardholder Name + Valid Thru + CVV + Brand Logo
+                // BOTTOM ROW: Valid Thru + CVV + ATM PIN + Cardholder Name + Brand Logo
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.Bottom
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                             Column {
                                 Text(
                                     text = "VALID THRU",
@@ -946,7 +1012,7 @@ fun RealisticBankCardItem(
                             }
                             Column {
                                 Text(
-                                    text = "SECURITY CVV",
+                                    text = "CVV",
                                     color = subColor,
                                     fontSize = 7.sp,
                                     letterSpacing = 1.sp
@@ -957,6 +1023,22 @@ fun RealisticBankCardItem(
                                     fontSize = 13.sp,
                                     style = embossedStyle
                                 )
+                            }
+                            if (card.atmPin.isNotBlank()) {
+                                Column {
+                                    Text(
+                                        text = "ATM PIN",
+                                        color = subColor,
+                                        fontSize = 7.sp,
+                                        letterSpacing = 1.sp
+                                    )
+                                    Text(
+                                        text = if (revealed) card.atmPin else "••••",
+                                        color = contentColor,
+                                        fontSize = 13.sp,
+                                        style = embossedStyle
+                                    )
+                                }
                             }
                         }
                         Spacer(modifier = Modifier.height(6.dp))
@@ -977,7 +1059,7 @@ fun RealisticBankCardItem(
             }
         }
 
-        // 2. SLEEK ACTION DOCK UNDER THE PHYSICAL CARD
+        // 2. SLEEK ACTION DOCK UNDER THE PHYSICAL CARD (Reveal, Copy, PIN, Edit, Delete)
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -987,7 +1069,7 @@ fun RealisticBankCardItem(
             shape = RoundedCornerShape(bottomStart = 14.dp, bottomEnd = 14.dp),
             border = BorderStroke(0.8.dp, Color(0xFF282828))
         ) {
-            Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
                 if (card.iban.isNotBlank() || card.notes.isNotBlank()) {
                     Row(
                         modifier = Modifier
@@ -1025,19 +1107,19 @@ fun RealisticBankCardItem(
                     // Reveal / Mask Toggle
                     TextButton(
                         onClick = { revealed = !revealed },
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
                     ) {
                         Icon(
                             imageVector = if (revealed) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                             contentDescription = "Toggle Mask",
                             tint = CrispWhite,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(15.dp)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = if (revealed) "HIDE" else "REVEAL",
                             color = CrispWhite,
-                            fontSize = 11.sp,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -1045,46 +1127,77 @@ fun RealisticBankCardItem(
                     // Copy Card Number
                     TextButton(
                         onClick = { onCopy("Card Number", card.cardNumber) },
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.ContentCopy,
                             contentDescription = "Copy Card Number",
                             tint = CrispWhite,
-                            modifier = Modifier.size(15.dp)
+                            modifier = Modifier.size(14.dp)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("COPY CARD", color = CrispWhite, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("NUMBER", color = CrispWhite, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
 
                     // Copy IBAN (if available)
                     if (card.iban.isNotBlank()) {
                         TextButton(
                             onClick = { onCopy("IBAN", card.iban) },
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.AccountBalanceWallet,
                                 contentDescription = "Copy IBAN",
                                 tint = CrispWhite,
-                                modifier = Modifier.size(15.dp)
+                                modifier = Modifier.size(14.dp)
                             )
-                            Spacer(modifier = Modifier.width(5.dp))
-                            Text("IBAN", color = CrispWhite, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("IBAN", color = CrispWhite, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 
-                    // Delete Button
-                    IconButton(
-                        onClick = onDelete,
-                        modifier = Modifier.size(28.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.DeleteOutline,
-                            contentDescription = "Delete Card",
-                            tint = MutedWhite,
-                            modifier = Modifier.size(18.dp)
-                        )
+                    // Copy ATM PIN (if available)
+                    if (card.atmPin.isNotBlank()) {
+                        TextButton(
+                            onClick = { onCopy("ATM PIN", card.atmPin) },
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Dialpad,
+                                contentDescription = "Copy PIN",
+                                tint = CrispWhite,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("PIN", color = CrispWhite, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    // Edit & Delete Action Icons
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = onEdit,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit Card",
+                                tint = CrispWhite,
+                                modifier = Modifier.size(17.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DeleteOutline,
+                                contentDescription = "Delete Card",
+                                tint = MutedWhite,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -1092,29 +1205,43 @@ fun RealisticBankCardItem(
     }
 }
 
+// ==================== ADD & EDIT CARD DIALOG WITH AUTO-BRAND & LUHN RADAR ====================
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddCardDialog(
+fun CardFormDialog(
+    existingCard: CardEntity?,
     onDismiss: () -> Unit,
     onSave: (CardEntity) -> Unit
 ) {
-    var bankName by remember { mutableStateOf("") }
-    var cardholderName by remember { mutableStateOf("") }
-    var cardNumber by remember { mutableStateOf("") }
-    var iban by remember { mutableStateOf("") }
-    var expiryDate by remember { mutableStateOf("") }
-    var cvv by remember { mutableStateOf("") }
-    var cardType by remember { mutableStateOf("Credit") }
-    var brand by remember { mutableStateOf("Visa") }
-    var themeContrast by remember { mutableStateOf("Pitch Black") }
-    var billingDueDay by remember { mutableStateOf("1") }
-    var notes by remember { mutableStateOf("") }
+    val isEditing = existingCard != null
+
+    var bankName by remember { mutableStateOf(existingCard?.bankName ?: "") }
+    var cardholderName by remember { mutableStateOf(existingCard?.cardholderName ?: "") }
+    var cardNumber by remember { mutableStateOf(existingCard?.cardNumber ?: "") }
+    var iban by remember { mutableStateOf(existingCard?.iban ?: "") }
+    var expiryDate by remember { mutableStateOf(existingCard?.expiryDate ?: "") }
+    var cvv by remember { mutableStateOf(existingCard?.cvv ?: "") }
+    var atmPin by remember { mutableStateOf(existingCard?.atmPin ?: "") }
+    var cardType by remember { mutableStateOf(existingCard?.cardType ?: "Credit") }
+    var brand by remember { mutableStateOf(existingCard?.brand ?: "Visa") }
+    var themeContrast by remember { mutableStateOf(existingCard?.themeContrast ?: "Pitch Black") }
+    var notes by remember { mutableStateOf(existingCard?.notes ?: "") }
+
+    val autoDetectedBrand = remember(cardNumber) { detectCardBrandAutomatically(cardNumber) }
+    val luhnValid = remember(cardNumber) { isValidLuhnNumber(cardNumber) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = DeepSurface,
         titleContentColor = CrispWhite,
-        title = { Text("ADD REALISTIC CARD", fontWeight = FontWeight.Bold, letterSpacing = 1.sp) },
+        title = {
+            Text(
+                text = if (isEditing) "EDIT CARD" else "ADD NEW CARD",
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.sp
+            )
+        },
         text = {
             Column(
                 modifier = Modifier
@@ -1134,18 +1261,54 @@ fun AddCardDialog(
                     label = { Text("Cardholder Name") },
                     singleLine = true
                 )
-                OutlinedTextField(
-                    value = cardNumber,
-                    onValueChange = { if (it.length <= 16) cardNumber = it.filter { c -> c.isDigit() } },
-                    label = { Text("16-Digit Card Number") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true
-                )
+
+                // 16-Digit Card Number with Live Auto-Brand & Luhn Checksum Radar
+                Column {
+                    OutlinedTextField(
+                        value = cardNumber,
+                        onValueChange = { input ->
+                            val clean = input.filter { c -> c.isDigit() }.take(16)
+                            cardNumber = clean
+                            val detected = detectCardBrandAutomatically(clean)
+                            if (detected.isNotEmpty()) {
+                                brand = detected
+                            }
+                        },
+                        label = { Text("16-Digit Card Number") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    val radarStatus = when {
+                        cardNumber.isEmpty() -> "Auto-Brand & Luhn Radar Ready"
+                        cardNumber.length < 13 -> {
+                            val bInfo = if (autoDetectedBrand.isNotEmpty()) " • Brand: $autoDetectedBrand" else ""
+                            "Digits: ${cardNumber.length}/16$bInfo"
+                        }
+                        luhnValid -> {
+                            val bInfo = if (autoDetectedBrand.isNotEmpty()) autoDetectedBrand else brand
+                            "✓ Valid Luhn Checksum • Detected: $bInfo"
+                        }
+                        else -> "⚠️ Checksum warning: Double-check digits (Luhn mismatch)"
+                    }
+
+                    Text(
+                        text = radarStatus,
+                        color = if (cardNumber.length >= 13 && luhnValid) CrispWhite else MutedWhite,
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+                }
+
+                // Expiry, CVV & Encrypted ATM PIN Row
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = expiryDate,
                         onValueChange = { if (it.length <= 5) expiryDate = it },
-                        label = { Text("Expiry (MM/YY)") },
+                        label = { Text("MM/YY") },
                         modifier = Modifier.weight(1f),
                         singleLine = true
                     )
@@ -1157,46 +1320,47 @@ fun AddCardDialog(
                         modifier = Modifier.weight(1f),
                         singleLine = true
                     )
+                    OutlinedTextField(
+                        value = atmPin,
+                        onValueChange = { if (it.length <= 6) atmPin = it.filter { c -> c.isDigit() } },
+                        label = { Text("ATM PIN") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
                 }
+
                 OutlinedTextField(
                     value = iban,
                     onValueChange = { iban = it.uppercase() },
                     label = { Text("IBAN (Optional)") },
                     singleLine = true
                 )
+
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = brand,
                         onValueChange = { brand = it },
-                        label = { Text("Brand (Visa / Mastercard)") },
+                        label = { Text("Brand (Auto/Manual)") },
                         modifier = Modifier.weight(1f),
                         singleLine = true
                     )
                     OutlinedTextField(
                         value = cardType,
                         onValueChange = { cardType = it },
-                        label = { Text("Type (Credit / Debit)") },
+                        label = { Text("Type (Credit/Debit)") },
                         modifier = Modifier.weight(1f),
                         singleLine = true
                     )
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = billingDueDay,
-                        onValueChange = { billingDueDay = it.filter { c -> c.isDigit() } },
-                        label = { Text("Due Day (1-31)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = themeContrast,
-                        onValueChange = { themeContrast = it },
-                        label = { Text("Finish (Pitch Black / Crisp White)") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                }
+
+                OutlinedTextField(
+                    value = themeContrast,
+                    onValueChange = { themeContrast = it },
+                    label = { Text("Card Finish (Pitch Black / Crisp White)") },
+                    singleLine = true
+                )
+
                 OutlinedTextField(
                     value = notes,
                     onValueChange = { notes = it },
@@ -1210,16 +1374,17 @@ fun AddCardDialog(
                     if (bankName.isNotBlank() && cardNumber.length >= 4) {
                         onSave(
                             CardEntity(
+                                id = existingCard?.id ?: 0,
                                 bankName = bankName.trim(),
                                 cardholderName = cardholderName.trim().ifEmpty { "CARDHOLDER" },
                                 cardNumber = cardNumber,
                                 iban = iban.trim(),
                                 expiryDate = expiryDate.ifEmpty { "12/29" },
                                 cvv = cvv.ifEmpty { "000" },
+                                atmPin = atmPin.trim(),
                                 cardType = cardType.ifEmpty { "Credit" },
                                 brand = brand.ifEmpty { "Visa" },
                                 themeContrast = themeContrast,
-                                billingDueDay = billingDueDay.toIntOrNull()?.coerceIn(1, 31) ?: 1,
                                 notes = notes.trim()
                             )
                         )
@@ -1227,7 +1392,7 @@ fun AddCardDialog(
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = CrispWhite, contentColor = PitchBlack)
             ) {
-                Text("SAVE CARD", fontWeight = FontWeight.Bold)
+                Text(if (isEditing) "UPDATE CARD" else "SAVE CARD", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
@@ -1253,4 +1418,4 @@ for path, content in files.items():
     with open(path, "w", encoding="utf-8") as f:
         f.write(content)
 
-print("CardVault Offline Realistic 3D Bank Card Edition Generated Successfully!")
+print("CardVault Offline v3.0 (Auto-Brand, Luhn Validator, Edit Card & ATM PIN) Generated Successfully!")
