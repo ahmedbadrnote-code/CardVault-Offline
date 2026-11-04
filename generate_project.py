@@ -50,8 +50,8 @@ android {
         applicationId = "com.secure.cardvault"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -118,6 +118,62 @@ dependencies {
 }
 """,
 
+    "app/src/main/res/drawable/ic_launcher_background.xml": """<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#000000"
+        android:pathData="M0,0h108v108h-108z"/>
+</vector>
+""",
+
+    "app/src/main/res/drawable/ic_launcher_foreground.xml": """<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Outer Monochrome Shield -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.5"
+        android:fillColor="#0A0A0A"
+        android:pathData="M54,24 L78,34 C78,57 54,82 54,82 C54,82 30,57 30,34 Z"/>
+    <!-- Lock Shackle -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.2"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M47,49 V43 C47,39.1 50.1,36 54,36 C57.9,36 61,39.1 61,43 V49"/>
+    <!-- Lock Body -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M43,49 h22 v16 h-22 z"/>
+    <!-- Keyhole Cutout -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M52.5,54 h3 v6 h-3 z"/>
+</vector>
+""",
+
+    "app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml": """<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>
+""",
+
+    "app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml": """<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>
+""",
+
     "app/src/main/AndroidManifest.xml": """<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
@@ -125,6 +181,8 @@ dependencies {
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
     <application
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:allowBackup="false"
         android:fullBackupContent="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -317,7 +375,6 @@ import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -406,7 +463,6 @@ class MainActivity : AppCompatActivity() {
                 BiometricManager.Authenticators.DEVICE_CREDENTIAL
 
         if (biometricManager.canAuthenticate(authenticators) != BiometricManager.BIOMETRIC_SUCCESS) {
-            // Fallback if device has no pin/biometric enrolled during testing
             isUnlocked = true
             return
         }
@@ -614,7 +670,6 @@ fun MonochromeCardItem(
         colors = CardDefaults.cardColors(containerColor = bgColor)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            // Top Row: Bank Name + Brand/Type + Eye Toggle
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -654,7 +709,6 @@ fun MonochromeCardItem(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Formatted 16-digit Number
             Text(
                 text = formattedNumber,
                 color = contentColor,
@@ -666,7 +720,6 @@ fun MonochromeCardItem(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Expiry, CVV, Billing Day
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -712,7 +765,6 @@ fun MonochromeCardItem(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // One-tap Copy Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -908,4 +960,4 @@ for path, content in files.items():
     with open(path, "w", encoding="utf-8") as f:
         f.write(content)
 
-print("CardVault Offline Native Android Project Generated Successfully!")
+print("CardVault Offline Native Android Project with Custom Icon Generated Successfully!")
