@@ -50,8 +50,8 @@ android {
         applicationId = "com.secure.cardvault"
         minSdk = 26
         targetSdk = 34
-        versionCode = 6
-        versionName = "4.1.0"
+        versionCode = 7
+        versionName = "5.0.0"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -230,7 +230,7 @@ data class CardEntity(
     val atmPin: String,
     val cardType: String,
     val brand: String,
-    val themeContrast: String,
+    val themeContrast: String, // Pitch Black, Carbon Gray, Titanium Silver, Navy Dark, Obsidian Onyx
     val notes: String
 )
 """,
@@ -425,7 +425,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // STRICT SCREEN PROTECTION (Block Screenshots & Recording)
         window.setFlags(
             WindowManager.LayoutParams.FLAG_SECURE,
             WindowManager.LayoutParams.FLAG_SECURE
@@ -717,17 +716,11 @@ fun VaultAppScreen(
 // ==================== PRECISION EMV CHIP, HOLOGRAM & BRAND LOGOS ====================
 
 @Composable
-fun LuxuryEmvChip(isInverted: Boolean) {
-    val chipBrush = if (isInverted) {
-        Brush.linearGradient(
-            colors = listOf(Color(0xFFCCCCCC), Color(0xFF777777), Color(0xFFF2F2F2), Color(0xFF999999))
-        )
-    } else {
-        Brush.linearGradient(
-            colors = listOf(Color(0xFFFFE596), Color(0xFFB38228), Color(0xFFFFF3C4), Color(0xFF8F6314))
-        )
-    }
-    val lineColor = if (isInverted) Color(0xFF333333) else Color(0xFF593D08)
+fun LuxuryEmvChip() {
+    val chipBrush = Brush.linearGradient(
+        colors = listOf(Color(0xFFFFE596), Color(0xFFB38228), Color(0xFFFFF3C4), Color(0xFF8F6314))
+    )
+    val lineColor = Color(0xFF593D08)
 
     Box(
         modifier = Modifier
@@ -927,8 +920,40 @@ fun UltraLuxury3DBankCard(
         label = "Card3DFlip"
     )
 
-    val isInverted = card.themeContrast.equals("Crisp White", ignoreCase = true)
     val isLuhnValid = remember(card.cardNumber) { isValidLuhnNumber(card.cardNumber) }
+
+    // Map Card Finish Choice to Custom Luxury Metallic Brushes
+    val cardBrush = when {
+        card.themeContrast.equals("Carbon Gray", ignoreCase = true) -> {
+            Brush.linearGradient(
+                colors = listOf(Color(0xFF2A2E33), Color(0xFF16191D), Color(0xFF0D0F12), Color(0xFF202428))
+            )
+        }
+        card.themeContrast.equals("Titanium Silver", ignoreCase = true) -> {
+            Brush.linearGradient(
+                colors = listOf(Color(0xFF8E959E), Color(0xFF5A616B), Color(0xFF3F444C), Color(0xFF747C87))
+            )
+        }
+        card.themeContrast.equals("Navy Dark", ignoreCase = true) -> {
+            Brush.linearGradient(
+                colors = listOf(Color(0xFF1A2639), Color(0xFF0F1722), Color(0xFF080C12), Color(0xFF15202E))
+            )
+        }
+        card.themeContrast.equals("Obsidian Onyx", ignoreCase = true) -> {
+            Brush.linearGradient(
+                colors = listOf(Color(0xFF232023), Color(0xFF121012), Color(0xFF080708), Color(0xFF1C191C))
+            )
+        }
+        else -> { // Default Pitch Black
+            Brush.linearGradient(
+                colors = listOf(Color(0xFF282828), Color(0xFF101010), Color(0xFF050505), Color(0xFF1E1E1E))
+            )
+        }
+    }
+
+    val contentColor = CrispWhite
+    val subColor = Color(0xFFA5A5A5)
+    val rimColor = Color(0xFF4A4A4A)
 
     val cleanDigits = remember(card.cardNumber) { card.cardNumber.replace(" ", "") }
     val numberGroups = remember(cleanDigits, revealed) {
@@ -941,48 +966,15 @@ fun UltraLuxury3DBankCard(
         }
     }
 
-    val frontBrush = if (isInverted) {
-        Brush.linearGradient(
-            colors = listOf(
-                Color(0xFFFFFFFF),
-                Color(0xFFF0F0F0),
-                Color(0xFFDCDCDC),
-                Color(0xFFF8F8F8)
-            ),
-            start = Offset(0f, 0f),
-            end = Offset(1000f, 700f)
-        )
-    } else {
-        Brush.linearGradient(
-            colors = listOf(
-                Color(0xFF282828),
-                Color(0xFF101010),
-                Color(0xFF050505),
-                Color(0xFF1E1E1E)
-            ),
-            start = Offset(0f, 0f),
-            end = Offset(1000f, 700f)
-        )
-    }
-
-    val contentColor = if (isInverted) PitchBlack else CrispWhite
-    val subColor = if (isInverted) Color(0xFF555555) else Color(0xFFA5A5A5)
-    val rimColor = if (isInverted) Color(0xFFBBBBBB) else Color(0xFF424242)
-
     val embossedNumberStyle = TextStyle(
         fontFamily = FontFamily.Monospace,
         fontWeight = FontWeight.ExtraBold,
         fontSize = 21.sp,
         letterSpacing = 2.sp,
-        shadow = if (!isInverted) {
-            Shadow(color = Color.Black, offset = Offset(3f, 4f), blurRadius = 3f)
-        } else {
-            Shadow(color = Color(0x55000000), offset = Offset(1f, 2f), blurRadius = 2f)
-        }
+        shadow = Shadow(color = Color.Black, offset = Offset(3f, 4f), blurRadius = 3f)
     )
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        // 3D FLIPPING CONTAINER (ISO/IEC 7810 ID-1 1.586 Aspect Ratio)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -993,7 +985,7 @@ fun UltraLuxury3DBankCard(
                 }
                 .shadow(14.dp, RoundedCornerShape(20.dp))
                 .clip(RoundedCornerShape(20.dp))
-                .background(frontBrush)
+                .background(cardBrush)
                 .border(1.4.dp, rimColor, RoundedCornerShape(20.dp))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
@@ -1002,9 +994,8 @@ fun UltraLuxury3DBankCard(
                     isFlippedToBack = !isFlippedToBack
                 }
         ) {
-            // Precision Laser-Engraved Guilloche Circles & Metallic Sheen Overlay
             Canvas(modifier = Modifier.fillMaxSize()) {
-                val patternColor = if (isInverted) Color.Black.copy(alpha = 0.035f) else Color.White.copy(alpha = 0.035f)
+                val patternColor = Color.White.copy(alpha = 0.035f)
                 for (r in 1..9) {
                     drawCircle(
                         color = patternColor,
@@ -1020,13 +1011,9 @@ fun UltraLuxury3DBankCard(
                     lineTo(0f, size.height * 0.65f)
                     close()
                 }
-                drawPath(
-                    path = sheenPath,
-                    color = if (isInverted) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.03f)
-                )
+                drawPath(path = sheenPath, color = Color.White.copy(alpha = 0.03f))
             }
 
-            // Inner metallic bezel frame
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -1035,14 +1022,12 @@ fun UltraLuxury3DBankCard(
             )
 
             if (rotationY <= 90f) {
-                // ==================== FRONT OF THE PHYSICAL BANK CARD ====================
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 24.dp, vertical = 20.dp),
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // TOP ROW: Bank Name + Luxury Tier Badge
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -1073,9 +1058,9 @@ fun UltraLuxury3DBankCard(
                             border = BorderStroke(0.8.dp, contentColor.copy(alpha = 0.35f))
                         ) {
                             Text(
-                                text = "${card.cardType.uppercase()} • WORLD ELITE",
+                                text = "${card.cardType.uppercase()} • ${card.themeContrast.uppercase()}",
                                 color = contentColor,
-                                fontSize = 9.sp,
+                                fontSize = 8.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 letterSpacing = 1.2.sp,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -1083,14 +1068,13 @@ fun UltraLuxury3DBankCard(
                         }
                     }
 
-                    // SECOND ROW: Precision Gold/Silver EMV Chip + Contactless NFC Waves
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            LuxuryEmvChip(isInverted = isInverted)
+                            LuxuryEmvChip()
                             Spacer(modifier = Modifier.width(14.dp))
                             ContactlessNfcWaves(tint = contentColor)
                         }
@@ -1104,7 +1088,6 @@ fun UltraLuxury3DBankCard(
                         )
                     }
 
-                    // THIRD ROW: 4 evenly spaced embossed digit groups + micro-BIN
                     Column {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -1130,7 +1113,6 @@ fun UltraLuxury3DBankCard(
                         }
                     }
 
-                    // BOTTOM ROW: Cardholder Name + Valid Thru + Brand Logo
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -1143,18 +1125,8 @@ fun UltraLuxury3DBankCard(
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Column {
-                                        Text(
-                                            text = "VALID",
-                                            color = subColor,
-                                            fontSize = 6.sp,
-                                            letterSpacing = 0.8.sp
-                                        )
-                                        Text(
-                                            text = "THRU",
-                                            color = subColor,
-                                            fontSize = 6.sp,
-                                            letterSpacing = 0.8.sp
-                                        )
+                                        Text(text = "VALID", color = subColor, fontSize = 6.sp, letterSpacing = 0.8.sp)
+                                        Text(text = "THRU", color = subColor, fontSize = 6.sp, letterSpacing = 0.8.sp)
                                     }
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
@@ -1195,7 +1167,6 @@ fun UltraLuxury3DBankCard(
                     }
                 }
             } else {
-                // ==================== BACK OF THE PHYSICAL BANK CARD (Rotated 180°) ====================
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -1211,7 +1182,6 @@ fun UltraLuxury3DBankCard(
                             letterSpacing = 1.sp,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp)
                         )
-                        // Realistic Pitch-Black Magnetic Stripe
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -1221,7 +1191,6 @@ fun UltraLuxury3DBankCard(
                         )
                     }
 
-                    // Signature Strip + CVV Security Box + Hologram Sticker
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1275,7 +1244,6 @@ fun UltraLuxury3DBankCard(
                         SecurityHologramSticker()
                     }
 
-                    // Encrypted ATM PIN, IBAN & Notes Bunker on the Back
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1332,7 +1300,6 @@ fun UltraLuxury3DBankCard(
                         }
                     }
 
-                    // Footer instruction
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1357,7 +1324,6 @@ fun UltraLuxury3DBankCard(
             }
         }
 
-        // 2. SLEEK TACTICAL ACTION DOCK UNDER THE 3D CARD
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1374,7 +1340,6 @@ fun UltraLuxury3DBankCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // 3D Flip Button
                 TextButton(
                     onClick = { isFlippedToBack = !isFlippedToBack },
                     contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
@@ -1394,7 +1359,6 @@ fun UltraLuxury3DBankCard(
                     )
                 }
 
-                // Reveal / Mask Toggle
                 TextButton(
                     onClick = { revealed = !revealed },
                     contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
@@ -1414,7 +1378,6 @@ fun UltraLuxury3DBankCard(
                     )
                 }
 
-                // Copy Card Number
                 TextButton(
                     onClick = { onCopy("Card Number", card.cardNumber) },
                     contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
@@ -1429,7 +1392,6 @@ fun UltraLuxury3DBankCard(
                     Text("NUMBER", color = CrispWhite, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
 
-                // Copy IBAN or PIN
                 if (card.iban.isNotBlank()) {
                     TextButton(
                         onClick = { onCopy("IBAN", card.iban) },
@@ -1446,7 +1408,6 @@ fun UltraLuxury3DBankCard(
                     }
                 }
 
-                // Edit & Delete Icons
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
                         onClick = onEdit,
@@ -1476,7 +1437,7 @@ fun UltraLuxury3DBankCard(
     }
 }
 
-// ==================== ADD & EDIT CARD DIALOG WITH TOUCH CHIPS & RADAR ====================
+// ==================== ADD & EDIT CARD DIALOG WITH MULTI-METALLIC FINISHES ====================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1533,7 +1494,6 @@ fun CardFormDialog(
                     singleLine = true
                 )
 
-                // 16-Digit Card Number with Live Auto-Brand & Luhn Checksum Radar
                 Column {
                     OutlinedTextField(
                         value = cardNumber,
@@ -1574,7 +1534,6 @@ fun CardFormDialog(
                     )
                 }
 
-                // Expiry, CVV & Encrypted ATM PIN Row
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = expiryDate,
@@ -1615,7 +1574,6 @@ fun CardFormDialog(
                     singleLine = true
                 )
 
-                // Touch Selector for Card Type (Credit / Debit / Prepaid)
                 Text("Card Type:", color = MutedWhite, fontSize = 11.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("Credit", "Debit", "Prepaid").forEach { typeOption ->
@@ -1627,15 +1585,20 @@ fun CardFormDialog(
                     }
                 }
 
-                // Touch Selector for Card Finish (Pitch Black / Crisp White)
-                Text("Card Metal Finish:", color = MutedWhite, fontSize = 11.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("Pitch Black", "Crisp White").forEach { styleOption ->
-                        FilterChip(
-                            selected = themeContrast.equals(styleOption, ignoreCase = true),
-                            onClick = { themeContrast = styleOption },
-                            label = { Text(styleOption, fontSize = 11.sp) }
-                        )
+                // Multi-Metallic Finish Selector Chips
+                Text("Metallic Card Finish:", color = MutedWhite, fontSize = 11.sp)
+                val finishes = listOf("Pitch Black", "Carbon Gray", "Titanium Silver", "Navy Dark", "Obsidian Onyx")
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    finishes.chunked(3).forEach { rowFinishes ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            rowFinishes.forEach { finishOption ->
+                                FilterChip(
+                                    selected = themeContrast.equals(finishOption, ignoreCase = true),
+                                    onClick = { themeContrast = finishOption },
+                                    label = { Text(finishOption, fontSize = 10.sp) }
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -1696,4 +1659,4 @@ for path, content in files.items():
     with open(path, "w", encoding="utf-8") as f:
         f.write(content)
 
-print("CardVault Offline v4.1 (Fixed Build & Touch Chips Edition) Generated Successfully!")
+print("CardVault Offline v5.0 (Multi-Metallic Finishes Edition) Generated Successfully!")
