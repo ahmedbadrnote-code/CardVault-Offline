@@ -50,8 +50,8 @@ android {
         applicationId = "com.secure.cardvault"
         minSdk = 26
         targetSdk = 34
-        versionCode = 4
-        versionName = "3.0.0"
+        versionCode = 5
+        versionName = "4.0.0"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -134,24 +134,20 @@ dependencies {
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Outer Monochrome Shield -->
     <path
         android:strokeColor="#FFFFFF"
         android:strokeWidth="3.5"
         android:fillColor="#0A0A0A"
         android:pathData="M54,24 L78,34 C78,57 54,82 54,82 C54,82 30,57 30,34 Z"/>
-    <!-- Lock Shackle -->
     <path
         android:strokeColor="#FFFFFF"
         android:strokeWidth="3.2"
         android:strokeLineCap="round"
         android:fillColor="#00000000"
         android:pathData="M47,49 V43 C47,39.1 50.1,36 54,36 C57.9,36 61,39.1 61,43 V49"/>
-    <!-- Lock Body -->
     <path
         android:fillColor="#FFFFFF"
         android:pathData="M43,49 h22 v16 h-22 z"/>
-    <!-- Keyhole Cutout -->
     <path
         android:fillColor="#000000"
         android:pathData="M52.5,54 h3 v6 h-3 z"/>
@@ -231,10 +227,10 @@ data class CardEntity(
     val iban: String,
     val expiryDate: String,
     val cvv: String,
-    val atmPin: String,       // Encrypted 4-6 digit ATM PIN (replaces Due Day)
-    val cardType: String,     // Credit, Debit, Prepaid
-    val brand: String,        // Auto-detected or custom: Visa, Mastercard, Meeza, Amex
-    val themeContrast: String,// Pitch Black, Crisp White
+    val atmPin: String,
+    val cardType: String,
+    val brand: String,
+    val themeContrast: String,
     val notes: String
 )
 """,
@@ -330,7 +326,6 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-// STRICT MONOCHROME DARK MODE PALETTE (Pitch Black & Crisp White)
 val PitchBlack = Color(0xFF000000)
 val DeepSurface = Color(0xFF0A0A0A)
 val CardGray = Color(0xFF141414)
@@ -372,11 +367,15 @@ import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -392,14 +391,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -423,7 +425,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // REQUIREMENT 2: STRICT SCREEN PROTECTION (Block Screenshots & Recording)
+        // STRICT SCREEN PROTECTION (Block Screenshots & Recording)
         window.setFlags(
             WindowManager.LayoutParams.FLAG_SECURE,
             WindowManager.LayoutParams.FLAG_SECURE
@@ -459,7 +461,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // REQUIREMENT 3: Biometric Prompt on App Launch & Resume from Background
         if (!isUnlocked) {
             promptBiometric()
         }
@@ -612,12 +613,21 @@ fun VaultAppScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Security, contentDescription = null, tint = CrispWhite)
                         Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            "CARDVAULT",
-                            color = CrispWhite,
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 1.5.sp
-                        )
+                        Column {
+                            Text(
+                                "CARDVAULT",
+                                color = CrispWhite,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 18.sp,
+                                letterSpacing = 2.sp
+                            )
+                            Text(
+                                "TAP CARD TO FLIP 3D • FRONT / BACK",
+                                color = MutedWhite,
+                                fontSize = 9.sp,
+                                letterSpacing = 1.sp
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = PitchBlack)
@@ -661,11 +671,11 @@ fun VaultAppScreen(
                     .fillMaxSize()
                     .padding(padding)
                     .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp),
-                contentPadding = PaddingValues(vertical = 16.dp)
+                verticalArrangement = Arrangement.spacedBy(26.dp),
+                contentPadding = PaddingValues(vertical = 18.dp)
             ) {
                 items(cards, key = { it.id }) { card ->
-                    RealisticBankCardItem(
+                    UltraLuxury3DBankCard(
                         card = card,
                         onCopy = { label, value ->
                             copyToClipboard(context, label, value)
@@ -704,56 +714,58 @@ fun VaultAppScreen(
     }
 }
 
-// ==================== REALISTIC EMV CHIP & NFC WAVE GRAPHICS ====================
+// ==================== PRECISION EMV CHIP, HOLOGRAM & BRAND LOGOS ====================
 
 @Composable
-fun RealisticEmvChip(isInverted: Boolean) {
+fun LuxuryEmvChip(isInverted: Boolean) {
     val chipBrush = if (isInverted) {
         Brush.linearGradient(
-            colors = listOf(Color(0xFFD6D6D6), Color(0xFF8C8C8C), Color(0xFFE8E8E8))
+            colors = listOf(Color(0xFFCCCCCC), Color(0xFF777777), Color(0xFFF2F2F2), Color(0xFF999999))
         )
     } else {
         Brush.linearGradient(
-            colors = listOf(Color(0xFFF5D77F), Color(0xFFB8862D), Color(0xFFFCE8A6))
+            colors = listOf(Color(0xFFFFE596), Color(0xFFB38228), Color(0xFFFFF3C4), Color(0xFF8F6314))
         )
     }
-    val lineColor = if (isInverted) Color(0xFF444444) else Color(0xFF6E4E11)
+    val lineColor = if (isInverted) Color(0xFF333333) else Color(0xFF593D08)
 
     Box(
         modifier = Modifier
-            .size(width = 46.dp, height = 35.dp)
-            .clip(RoundedCornerShape(6.dp))
+            .size(width = 50.dp, height = 38.dp)
+            .clip(RoundedCornerShape(7.dp))
             .background(chipBrush)
-            .border(1.dp, lineColor.copy(alpha = 0.7f), RoundedCornerShape(6.dp))
+            .border(1.dp, lineColor.copy(alpha = 0.8f), RoundedCornerShape(7.dp))
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-            drawLine(lineColor, Offset(0f, h * 0.33f), Offset(w, h * 0.33f), strokeWidth = 1.5f)
-            drawLine(lineColor, Offset(0f, h * 0.66f), Offset(w, h * 0.66f), strokeWidth = 1.5f)
-            drawLine(lineColor, Offset(w * 0.32f, 0f), Offset(w * 0.32f, h), strokeWidth = 1.5f)
-            drawLine(lineColor, Offset(w * 0.68f, 0f), Offset(w * 0.68f, h), strokeWidth = 1.5f)
             drawRoundRect(
-                color = lineColor,
-                topLeft = Offset(w * 0.32f, h * 0.25f),
-                size = Size(w * 0.36f, h * 0.5f),
-                cornerRadius = CornerRadius(4f, 4f),
-                style = Stroke(width = 1.8f)
+                color = lineColor.copy(alpha = 0.7f),
+                topLeft = Offset(w * 0.30f, h * 0.22f),
+                size = Size(w * 0.40f, h * 0.56f),
+                cornerRadius = CornerRadius(6f, 6f),
+                style = Stroke(width = 1.6f)
             )
+            drawLine(lineColor, Offset(0f, h * 0.34f), Offset(w * 0.30f, h * 0.34f), strokeWidth = 1.4f)
+            drawLine(lineColor, Offset(0f, h * 0.66f), Offset(w * 0.30f, h * 0.66f), strokeWidth = 1.4f)
+            drawLine(lineColor, Offset(w * 0.70f, h * 0.34f), Offset(w, h * 0.34f), strokeWidth = 1.4f)
+            drawLine(lineColor, Offset(w * 0.70f, h * 0.66f), Offset(w, h * 0.66f), strokeWidth = 1.4f)
+            drawLine(lineColor, Offset(w * 0.5f, 0f), Offset(w * 0.5f, h * 0.22f), strokeWidth = 1.4f)
+            drawLine(lineColor, Offset(w * 0.5f, h * 0.78f), Offset(w * 0.5f, h), strokeWidth = 1.4f)
         }
     }
 }
 
 @Composable
-fun ContactlessNfcIcon(tint: Color) {
-    Canvas(modifier = Modifier.size(24.dp)) {
-        val stroke = 2.4f
+fun ContactlessNfcWaves(tint: Color) {
+    Canvas(modifier = Modifier.size(26.dp)) {
+        val stroke = 2.5f
         for (i in 1..4) {
-            val radius = (size.minDimension / 5.5f) * i
+            val radius = (size.minDimension / 5.2f) * i
             drawArc(
                 color = tint.copy(alpha = 0.85f),
-                startAngle = -42f,
-                sweepAngle = 84f,
+                startAngle = -40f,
+                sweepAngle = 80f,
                 useCenter = false,
                 topLeft = Offset(size.width * 0.1f - radius / 2, size.height / 2 - radius / 2),
                 size = Size(radius, radius),
@@ -764,51 +776,124 @@ fun ContactlessNfcIcon(tint: Color) {
 }
 
 @Composable
-fun CardBrandLogo(brand: String, contentColor: Color) {
+fun SecurityHologramSticker() {
+    val holoBrush = Brush.linearGradient(
+        colors = listOf(
+            Color(0xFF888888),
+            Color(0xFFE8E8E8),
+            Color(0xFF707070),
+            Color(0xFFFFFFFF),
+            Color(0xFF999999)
+        )
+    )
+    Box(
+        modifier = Modifier
+            .size(width = 48.dp, height = 30.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .background(holoBrush)
+            .border(0.8.dp, Color.White.copy(alpha = 0.7f), RoundedCornerShape(6.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawCircle(
+                color = Color.Black.copy(alpha = 0.25f),
+                radius = size.minDimension * 0.35f,
+                style = Stroke(width = 1.5f)
+            )
+            drawCircle(
+                color = Color.Black.copy(alpha = 0.20f),
+                radius = size.minDimension * 0.20f,
+                style = Stroke(width = 1.2f)
+            )
+        }
+        Text(
+            text = "SECURE",
+            color = Color.Black.copy(alpha = 0.65f),
+            fontSize = 7.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 1.sp
+        )
+    }
+}
+
+@Composable
+fun LuxuryBrandMark(brand: String, contentColor: Color) {
     val cleanBrand = brand.trim().lowercase()
     when {
         cleanBrand.contains("master") -> {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.width(38.dp).height(24.dp)) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(modifier = Modifier.width(44.dp).height(26.dp)) {
                     Box(
                         modifier = Modifier
-                            .size(24.dp)
+                            .size(26.dp)
                             .align(Alignment.CenterStart)
                             .background(contentColor.copy(alpha = 0.85f), CircleShape)
                     )
                     Box(
                         modifier = Modifier
-                            .size(24.dp)
+                            .size(26.dp)
                             .align(Alignment.CenterEnd)
                             .border(1.5.dp, contentColor, CircleShape)
-                            .background(contentColor.copy(alpha = 0.4f), CircleShape)
+                            .background(contentColor.copy(alpha = 0.35f), CircleShape)
                     )
                 }
+                Text(
+                    text = "mastercard",
+                    color = contentColor,
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
+                )
             }
         }
         cleanBrand.contains("visa") -> {
-            Text(
-                text = "VISA",
-                color = contentColor,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Black,
-                fontStyle = FontStyle.Italic,
-                letterSpacing = 1.sp
-            )
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = "VISA",
+                    color = contentColor,
+                    fontSize = 25.sp,
+                    fontWeight = FontWeight.Black,
+                    fontStyle = FontStyle.Italic,
+                    letterSpacing = 1.2.sp
+                )
+                Text(
+                    text = "INFINITE",
+                    color = contentColor.copy(alpha = 0.7f),
+                    fontSize = 7.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.5.sp
+                )
+            }
         }
         cleanBrand.contains("meeza") -> {
             Surface(
                 color = contentColor.copy(alpha = 0.12f),
                 shape = RoundedCornerShape(6.dp),
-                border = BorderStroke(1.dp, contentColor)
+                border = BorderStroke(1.2.dp, contentColor)
             ) {
                 Text(
                     text = "MEEZA",
                     color = contentColor,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Black,
                     letterSpacing = 1.5.sp,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                )
+            }
+        }
+        cleanBrand.contains("amex") -> {
+            Surface(
+                color = contentColor.copy(alpha = 0.15f),
+                shape = RoundedCornerShape(4.dp),
+                border = BorderStroke(1.dp, contentColor)
+            ) {
+                Text(
+                    text = "AMERICAN EXPRESS",
+                    color = contentColor,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 1.sp,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
                 )
             }
         }
@@ -816,7 +901,7 @@ fun CardBrandLogo(brand: String, contentColor: Color) {
             Text(
                 text = brand.uppercase(),
                 color = contentColor,
-                fontSize = 16.sp,
+                fontSize = 17.sp,
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = 1.5.sp
             )
@@ -824,46 +909,56 @@ fun CardBrandLogo(brand: String, contentColor: Color) {
     }
 }
 
-// ==================== REALISTIC PHYSICAL BANK CARD COMPONENT ====================
+// ==================== ULTRA-LUXURY 3D FLIPPING BANK CARD ====================
 
 @Composable
-fun RealisticBankCardItem(
+fun UltraLuxury3DBankCard(
     card: CardEntity,
     onCopy: (String, String) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     var revealed by remember { mutableStateOf(false) }
+    var isFlippedToBack by remember { mutableStateOf(false) }
 
-    val formattedNumber = remember(card.cardNumber, revealed) {
+    val rotationY by animateFloatAsState(
+        targetValue = if (isFlippedToBack) 180f else 0f,
+        animationSpec = tween(durationMillis = 550, easing = FastOutSlowInEasing),
+        label = "Card3DFlip"
+    )
+
+    val isInverted = card.themeContrast.equals("Crisp White", ignoreCase = true)
+    val isLuhnValid = remember(card.cardNumber) { isValidLuhnNumber(card.cardNumber) }
+
+    val cleanDigits = remember(card.cardNumber) { card.cardNumber.replace(" ", "") }
+    val numberGroups = remember(cleanDigits, revealed) {
         if (revealed) {
-            card.cardNumber.replace(" ", "").chunked(4).joinToString("   ")
+            val padded = cleanDigits.padEnd(16, '0')
+            padded.chunked(4).take(4)
         } else {
-            val last4 = if (card.cardNumber.length >= 4) card.cardNumber.takeLast(4) else card.cardNumber
-            "••••   ••••   ••••   $last4"
+            val last4 = if (cleanDigits.length >= 4) cleanDigits.takeLast(4) else cleanDigits.padEnd(4, '•')
+            listOf("••••", "••••", "••••", last4)
         }
     }
 
-    val isLuhnValid = remember(card.cardNumber) { isValidLuhnNumber(card.cardNumber) }
-    val isInverted = card.themeContrast.equals("Crisp White", ignoreCase = true)
-
-    val cardBrush = if (isInverted) {
+    val frontBrush = if (isInverted) {
         Brush.linearGradient(
             colors = listOf(
                 Color(0xFFFFFFFF),
-                Color(0xFFEAEAEA),
-                Color(0xFFDCDCDC)
+                Color(0xFFF0F0F0),
+                Color(0xFFDCDCDC),
+                Color(0xFFF8F8F8)
             ),
             start = Offset(0f, 0f),
-            end = Offset(900f, 600f)
+            end = Offset(1000f, 700f)
         )
     } else {
         Brush.linearGradient(
             colors = listOf(
-                Color(0xFF222222),
-                Color(0xFF0D0D0D),
+                Color(0xFF282828),
+                Color(0xFF101010),
                 Color(0xFF050505),
-                Color(0xFF1B1B1B)
+                Color(0xFF1E1E1E)
             ),
             start = Offset(0f, 0f),
             end = Offset(1000f, 700f)
@@ -871,333 +966,505 @@ fun RealisticBankCardItem(
     }
 
     val contentColor = if (isInverted) PitchBlack else CrispWhite
-    val subColor = if (isInverted) Color(0xFF555555) else Color(0xFFA0A0A0)
-    val borderColor = if (isInverted) Color(0xFFFFFFFF) else Color(0xFF3D3D3D)
+    val subColor = if (isInverted) Color(0xFF555555) else Color(0xFFA5A5A5)
+    val rimColor = if (isInverted) Color(0xFFBBBBBB) else Color(0xFF424242)
 
-    val embossedStyle = TextStyle(
+    val embossedNumberStyle = TextStyle(
         fontFamily = FontFamily.Monospace,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.ExtraBold,
+        fontSize = 21.sp,
+        letterSpacing = 2.sp,
         shadow = if (!isInverted) {
-            Shadow(color = Color.Black, offset = Offset(2f, 3f), blurRadius = 2f)
+            Shadow(color = Color.Black, offset = Offset(3f, 4f), blurRadius = 3f)
         } else {
-            Shadow(color = Color(0x55000000), offset = Offset(1f, 2f), blurRadius = 1f)
+            Shadow(color = Color(0x55000000), offset = Offset(1f, 2f), blurRadius = 2f)
         }
     )
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        // 1. REALISTIC ISO/IEC 7810 ID-1 CREDIT CARD SURFACE (Aspect Ratio 1.586)
+        // 3D FLIPPING CONTAINER (ISO/IEC 7810 ID-1 1.586 Aspect Ratio)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1.586f)
-                .clip(RoundedCornerShape(18.dp))
-                .background(cardBrush)
-                .border(1.2.dp, borderColor, RoundedCornerShape(18.dp))
-                .clickable { revealed = !revealed }
-        ) {
-            // Subtle Metallic Diagonal Glare Reflection
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val glareColor = if (isInverted) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.04f)
-                drawCircle(
-                    color = glareColor,
-                    radius = size.maxDimension * 0.55f,
-                    center = Offset(size.width * 0.88f, -size.height * 0.15f)
-                )
-                drawCircle(
-                    color = glareColor,
-                    radius = size.maxDimension * 0.4f,
-                    center = Offset(size.width * 0.1f, size.height * 1.15f)
-                )
-            }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 22.dp, vertical = 18.dp),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                // TOP ROW: Bank Name + Card Type Badge
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.AccountBalance,
-                            contentDescription = null,
-                            tint = contentColor,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = card.bankName.uppercase(),
-                            color = contentColor,
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 17.sp,
-                            letterSpacing = 1.5.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-
-                    Surface(
-                        color = contentColor.copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(6.dp),
-                        border = BorderStroke(0.5.dp, contentColor.copy(alpha = 0.3f))
-                    ) {
-                        Text(
-                            text = card.cardType.uppercase(),
-                            color = contentColor,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                        )
-                    }
+                .graphicsLayer {
+                    this.rotationY = rotationY
+                    cameraDistance = 16f * density
                 }
-
-                // MIDDLE ROW: Realistic EMV Chip + Contactless NFC Icon + Luhn Badge
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                .shadow(14.dp, RoundedCornerShape(20.dp))
+                .clip(RoundedCornerShape(20.dp))
+                .background(frontBrush)
+                .border(1.4.dp, rimColor, RoundedCornerShape(20.dp))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        RealisticEmvChip(isInverted = isInverted)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        ContactlessNfcIcon(tint = contentColor)
-                    }
-
-                    Text(
-                        text = if (isLuhnValid) "✓ VERIFIED" else "CUSTOM NO.",
-                        color = subColor,
-                        fontSize = 9.sp,
-                        fontFamily = FontFamily.Monospace,
-                        letterSpacing = 0.8.sp
+                    isFlippedToBack = !isFlippedToBack
+                }
+        ) {
+            // Precision Laser-Engraved Guilloche Circles & Metallic Sheen Overlay
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val patternColor = if (isInverted) Color.Black.copy(alpha = 0.035f) else Color.White.copy(alpha = 0.035f)
+                // Concentric bank-grade guilloche rings on the right side
+                for (r in 1..9) {
+                    drawCircle(
+                        color = patternColor,
+                        radius = (size.minDimension * 0.14f) * r,
+                        center = Offset(size.width * 0.85f, size.height * 0.50f),
+                        style = Stroke(width = 1.2f)
                     )
                 }
-
-                // EMBOSSED 16-DIGIT CARD NUMBER
-                Text(
-                    text = formattedNumber,
-                    color = contentColor,
-                    fontSize = 20.sp,
-                    letterSpacing = 1.8.sp,
-                    style = embossedStyle,
-                    maxLines = 1
-                )
-
-                // BOTTOM ROW: Valid Thru + CVV + ATM PIN + Cardholder Name + Brand Logo
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Bottom
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                            Column {
-                                Text(
-                                    text = "VALID THRU",
-                                    color = subColor,
-                                    fontSize = 7.sp,
-                                    letterSpacing = 1.sp
-                                )
-                                Text(
-                                    text = card.expiryDate,
-                                    color = contentColor,
-                                    fontSize = 13.sp,
-                                    style = embossedStyle
-                                )
-                            }
-                            Column {
-                                Text(
-                                    text = "CVV",
-                                    color = subColor,
-                                    fontSize = 7.sp,
-                                    letterSpacing = 1.sp
-                                )
-                                Text(
-                                    text = if (revealed) card.cvv else "•••",
-                                    color = contentColor,
-                                    fontSize = 13.sp,
-                                    style = embossedStyle
-                                )
-                            }
-                            if (card.atmPin.isNotBlank()) {
-                                Column {
-                                    Text(
-                                        text = "ATM PIN",
-                                        color = subColor,
-                                        fontSize = 7.sp,
-                                        letterSpacing = 1.sp
-                                    )
-                                    Text(
-                                        text = if (revealed) card.atmPin else "••••",
-                                        color = contentColor,
-                                        fontSize = 13.sp,
-                                        style = embossedStyle
-                                    )
-                                }
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = card.cardholderName.uppercase(),
-                            color = contentColor,
-                            fontSize = 14.sp,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.SemiBold,
-                            letterSpacing = 1.5.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-
-                    CardBrandLogo(brand = card.brand, contentColor = contentColor)
+                // Diagonal metallic light reflection
+                val sheenPath = Path().apply {
+                    moveTo(0f, size.height * 0.35f)
+                    lineTo(size.width * 0.65f, 0f)
+                    lineTo(size.width * 0.90f, 0f)
+                    lineTo(0f, size.height * 0.65f)
+                    close()
                 }
+                drawPath(
+                    path = sheenPath,
+                    color = if (isInverted) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.03f)
+                )
             }
-        }
 
-        // 2. SLEEK ACTION DOCK UNDER THE PHYSICAL CARD (Reveal, Copy, PIN, Edit, Delete)
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp)
-                .offset(y = (-4).dp),
-            color = Color(0xFF0E0E0E),
-            shape = RoundedCornerShape(bottomStart = 14.dp, bottomEnd = 14.dp),
-            border = BorderStroke(0.8.dp, Color(0xFF282828))
-        ) {
-            Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
-                if (card.iban.isNotBlank() || card.notes.isNotBlank()) {
+            // Inner metallic bezel frame
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(4.dp)
+                    .border(0.5.dp, contentColor.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
+            )
+
+            if (rotationY <= 90f) {
+                // ==================== FRONT OF THE PHYSICAL BANK CARD ====================
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp, vertical = 20.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // TOP ROW: Bank Name + Luxury Tier Badge
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 6.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (card.iban.isNotBlank()) {
-                            Text(
-                                text = "IBAN: ${if (revealed) card.iban else "•••• " + card.iban.takeLast(4)}",
-                                color = MutedWhite,
-                                fontSize = 11.sp,
-                                fontFamily = FontFamily.Monospace
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Icon(
+                                imageVector = Icons.Default.AccountBalance,
+                                contentDescription = null,
+                                tint = contentColor,
+                                modifier = Modifier.size(20.dp)
                             )
-                        }
-                        if (card.notes.isNotBlank()) {
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = if (revealed) card.notes else "Note: ••••••",
-                                color = MutedWhite,
-                                fontSize = 11.sp,
+                                text = card.bankName.uppercase(),
+                                color = contentColor,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 18.sp,
+                                letterSpacing = 2.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
-                    }
-                    Divider(color = Color(0xFF222222), thickness = 0.5.dp)
-                    Spacer(modifier = Modifier.height(6.dp))
-                }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Reveal / Mask Toggle
-                    TextButton(
-                        onClick = { revealed = !revealed },
-                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
+                        Surface(
+                            color = contentColor.copy(alpha = 0.08f),
+                            shape = RoundedCornerShape(6.dp),
+                            border = BorderStroke(0.8.dp, contentColor.copy(alpha = 0.35f))
+                        ) {
+                            Text(
+                                text = "${card.cardType.uppercase()} • WORLD ELITE",
+                                color = contentColor,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = 1.2.sp,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+
+                    // SECOND ROW: Precision Gold/Silver EMV Chip + Contactless NFC Waves
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Icon(
-                            imageVector = if (revealed) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                            contentDescription = "Toggle Mask",
-                            tint = CrispWhite,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            LuxuryEmvChip(isInverted = isInverted)
+                            Spacer(modifier = Modifier.width(14.dp))
+                            ContactlessNfcWaves(tint = contentColor)
+                        }
+
                         Text(
-                            text = if (revealed) "HIDE" else "REVEAL",
-                            color = CrispWhite,
-                            fontSize = 10.sp,
+                            text = if (isLuhnValid) "✓ LUHN VERIFIED" else "TAP TO FLIP 3D ↻",
+                            color = subColor,
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace,
+                            letterSpacing = 1.sp
+                        )
+                    }
+
+                    // THIRD ROW: 4 evenly spaced embossed digit groups + micro-BIN under first group
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            numberGroups.forEach { group ->
+                                Text(
+                                    text = group,
+                                    color = contentColor,
+                                    style = embossedNumberStyle
+                                )
+                            }
+                        }
+                        if (cleanDigits.length >= 4) {
+                            Text(
+                                text = cleanDigits.take(4),
+                                color = subColor.copy(alpha = 0.7f),
+                                fontSize = 8.sp,
+                                fontFamily = FontFamily.Monospace,
+                                letterSpacing = 1.sp
+                            )
+                        }
+                    }
+
+                    // BOTTOM ROW: Cardholder Name + Valid Thru + Brand Logo
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(24.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "VALID\nTHRU",
+                                        color = subColor,
+                                        fontSize = 6.sp,
+                                        lineHeight = 7.sp,
+                                        letterSpacing = 0.8.sp
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = card.expiryDate,
+                                        color = contentColor,
+                                        fontSize = 14.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                if (revealed) {
+                                    Text(
+                                        text = "CVV: ${card.cvv}",
+                                        color = contentColor,
+                                        fontSize = 12.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Text(
+                                text = card.cardholderName.uppercase(),
+                                color = contentColor,
+                                fontSize = 14.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 2.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        LuxuryBrandMark(brand = card.brand, contentColor = contentColor)
+                    }
+                }
+            } else {
+                // ==================== BACK OF THE PHYSICAL BANK CARD (Rotated 180°) ====================
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { this.rotationY = 180f }
+                        .padding(vertical = 14.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            text = "AUTHORIZED ELECTRONIC USE ONLY • ENCRYPTED OFFLINE VAULT",
+                            color = subColor,
+                            fontSize = 7.sp,
+                            letterSpacing = 1.sp,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp)
+                        )
+                        // Realistic Pitch-Black Magnetic Stripe
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(42.dp)
+                                .background(Color(0xFF030303))
+                                .border(0.5.dp, Color(0xFF2B2B2B))
+                        )
+                    }
+
+                    // Signature Strip + CVV Security Box + Hologram Sticker
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        // Hatched Signature Panel + CVV Box
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(34.dp)
+                                    .clip(RoundedCornerShape(topStart = 4.dp, bottomStart = 4.dp))
+                                    .background(Color(0xFFE5E5E5))
+                                    .padding(horizontal = 10.dp),
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                Text(
+                                    text = card.cardholderName.uppercase(),
+                                    color = Color(0xFF333333),
+                                    fontSize = 11.sp,
+                                    fontStyle = FontStyle.Italic,
+                                    fontFamily = FontFamily.Serif,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .width(54.dp)
+                                    .height(34.dp)
+                                    .clip(RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp))
+                                    .background(CrispWhite)
+                                    .border(1.dp, PitchBlack),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (revealed) card.cvv else "•••",
+                                    color = PitchBlack,
+                                    fontSize = 13.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Black
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+                        SecurityHologramSticker()
+                    }
+
+                    // Encrypted ATM PIN, IBAN & Notes Bunker on the Back
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        color = contentColor.copy(alpha = 0.07f),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(0.7.dp, contentColor.copy(alpha = 0.22f))
+                    ) {
+                        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "CVV: ${if (revealed) card.cvv else "•••"}",
+                                    color = contentColor,
+                                    fontSize = 11.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "ATM PIN: ${
+                                        if (card.atmPin.isBlank()) "N/A"
+                                        else if (revealed) card.atmPin
+                                        else "••••"
+                                    }",
+                                    color = contentColor,
+                                    fontSize = 11.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            if (card.iban.isNotBlank()) {
+                                Spacer(modifier = Modifier.height(3.dp))
+                                Text(
+                                    text = "IBAN: ${if (revealed) card.iban else "•••• •••• " + card.iban.takeLast(4)}",
+                                    color = subColor,
+                                    fontSize = 10.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            if (card.notes.isNotBlank()) {
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "NOTE: ${if (revealed) card.notes else "••••••••••••"}",
+                                    color = subColor,
+                                    fontSize = 10.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+
+                    // Footer instruction
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "${card.bankName.uppercase()} • AES-256 SQLCIPHER",
+                            color = subColor,
+                            fontSize = 8.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                        Text(
+                            text = "TAP TO FLIP FRONT ↺",
+                            color = contentColor,
+                            fontSize = 8.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
+                }
+            }
+        }
 
-                    // Copy Card Number
+        // 2. SLEEK TACTICAL ACTION DOCK UNDER THE 3D CARD
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp)
+                .offset(y = (-4).dp),
+            color = Color(0xFF0D0D0D),
+            shape = RoundedCornerShape(bottomStart = 14.dp, bottomEnd = 14.dp),
+            border = BorderStroke(0.8.dp, Color(0xFF282828))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 3D Flip Button
+                TextButton(
+                    onClick = { isFlippedToBack = !isFlippedToBack },
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.FlipCameraAndroid,
+                        contentDescription = "Flip 3D",
+                        tint = CrispWhite,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = if (isFlippedToBack) "FRONT" else "FLIP 3D",
+                        color = CrispWhite,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Reveal / Mask Toggle
+                TextButton(
+                    onClick = { revealed = !revealed },
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = if (revealed) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        contentDescription = "Toggle Mask",
+                        tint = CrispWhite,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = if (revealed) "HIDE" else "REVEAL",
+                        color = CrispWhite,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Copy Card Number
+                TextButton(
+                    onClick = { onCopy("Card Number", card.cardNumber) },
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ContentCopy,
+                        contentDescription = "Copy Card Number",
+                        tint = CrispWhite,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("NUMBER", color = CrispWhite, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+
+                // Copy IBAN or PIN
+                if (card.iban.isNotBlank()) {
                     TextButton(
-                        onClick = { onCopy("Card Number", card.cardNumber) },
+                        onClick = { onCopy("IBAN", card.iban) },
                         contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
                     ) {
+                        Text("IBAN", color = CrispWhite, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                } else if (card.atmPin.isNotBlank()) {
+                    TextButton(
+                        onClick = { onCopy("ATM PIN", card.atmPin) },
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
+                    ) {
+                        Text("PIN", color = CrispWhite, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                // Edit & Delete Icons
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = onEdit,
+                        modifier = Modifier.size(28.dp)
+                    ) {
                         Icon(
-                            imageVector = Icons.Default.ContentCopy,
-                            contentDescription = "Copy Card Number",
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit Card",
                             tint = CrispWhite,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(16.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("NUMBER", color = CrispWhite, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
-
-                    // Copy IBAN (if available)
-                    if (card.iban.isNotBlank()) {
-                        TextButton(
-                            onClick = { onCopy("IBAN", card.iban) },
-                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AccountBalanceWallet,
-                                contentDescription = "Copy IBAN",
-                                tint = CrispWhite,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("IBAN", color = CrispWhite, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-
-                    // Copy ATM PIN (if available)
-                    if (card.atmPin.isNotBlank()) {
-                        TextButton(
-                            onClick = { onCopy("ATM PIN", card.atmPin) },
-                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Dialpad,
-                                contentDescription = "Copy PIN",
-                                tint = CrispWhite,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("PIN", color = CrispWhite, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-
-                    // Edit & Delete Action Icons
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(
-                            onClick = onEdit,
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Edit,
-                                contentDescription = "Edit Card",
-                                tint = CrispWhite,
-                                modifier = Modifier.size(17.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(4.dp))
-                        IconButton(
-                            onClick = onDelete,
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.DeleteOutline,
-                                contentDescription = "Delete Card",
-                                tint = MutedWhite,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DeleteOutline,
+                            contentDescription = "Delete Card",
+                            tint = MutedWhite,
+                            modifier = Modifier.size(17.dp)
+                        )
                     }
                 }
             }
@@ -1418,4 +1685,4 @@ for path, content in files.items():
     with open(path, "w", encoding="utf-8") as f:
         f.write(content)
 
-print("CardVault Offline v3.0 (Auto-Brand, Luhn Validator, Edit Card & ATM PIN) Generated Successfully!")
+print("CardVault Offline v4.0 (Ultra-Luxury 3D Flip Card Edition) Generated Successfully!")
