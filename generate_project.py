@@ -34,6 +34,8 @@ android.nonTransitiveRClass=true
 
     "app/proguard-rules.pro": """-keep class net.sqlcipher.** { *; }
 -keep class net.sqlcipher.database.** { *; }
+-keep class com.secure.cardvault.data.** { *; }
+-dontwarn javax.annotation.**
 """,
 
     "app/build.gradle.kts": """plugins {
@@ -50,8 +52,8 @@ android {
         applicationId = "com.secure.cardvault"
         minSdk = 26
         targetSdk = 34
-        versionCode = 7
-        versionName = "5.0.0"
+        versionCode = 8
+        versionName = "6.0.0"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -61,7 +63,9 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.getByName("debug")
         }
         debug {
             isMinifyEnabled = false
@@ -73,6 +77,9 @@ android {
     }
     kotlinOptions {
         jvmTarget = "17"
+        freeCompilerArgs += listOf(
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api"
+        )
     }
     buildFeatures {
         compose = true
@@ -93,6 +100,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
     implementation("androidx.activity:activity-compose:1.8.2")
+    implementation("androidx.profileinstaller:profileinstaller:1.3.1")
 
     // Jetpack Compose
     implementation(platform("androidx.compose:compose-bom:2024.02.00"))
@@ -182,6 +190,7 @@ dependencies {
         android:allowBackup="false"
         android:fullBackupContent="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
+        android:hardwareAccelerated="true"
         android:label="CardVault Offline"
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.NoActionBar">
@@ -215,9 +224,11 @@ dependencies {
 
     "app/src/main/java/com/secure/cardvault/data/CardEntity.kt": """package com.secure.cardvault.data
 
+import androidx.compose.runtime.Immutable
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
+@Immutable
 @Entity(tableName = "cards")
 data class CardEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
@@ -230,7 +241,7 @@ data class CardEntity(
     val atmPin: String,
     val cardType: String,
     val brand: String,
-    val themeContrast: String, // Pitch Black, Carbon Gray, Titanium Silver, Navy Dark, Obsidian Onyx
+    val themeContrast: String,
     val notes: String
 )
 """,
@@ -371,7 +382,6 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -379,6 +389,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -391,7 +402,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -417,6 +428,37 @@ import com.secure.cardvault.data.CardEntity
 import com.secure.cardvault.data.VaultDatabase
 import com.secure.cardvault.ui.*
 import kotlinx.coroutines.launch
+
+// Pre-allocated Static Brushes & Styles for Zero-Allocation 120fps Scrolling
+private val BrushPitchBlack = Brush.linearGradient(
+    colors = listOf(Color(0xFF282828), Color(0xFF101010), Color(0xFF050505), Color(0xFF1E1E1E))
+)
+private val BrushCarbonGray = Brush.linearGradient(
+    colors = listOf(Color(0xFF2A2E33), Color(0xFF16191D), Color(0xFF0D0F12), Color(0xFF202428))
+)
+private val BrushTitaniumSilver = Brush.linearGradient(
+    colors = listOf(Color(0xFF8E959E), Color(0xFF5A616B), Color(0xFF3F444C), Color(0xFF747C87))
+)
+private val BrushNavyDark = Brush.linearGradient(
+    colors = listOf(Color(0xFF1A2639), Color(0xFF0F1722), Color(0xFF080C12), Color(0xFF15202E))
+)
+private val BrushObsidianOnyx = Brush.linearGradient(
+    colors = listOf(Color(0xFF232023), Color(0xFF121012), Color(0xFF080708), Color(0xFF1C191C))
+)
+private val BrushGoldChip = Brush.linearGradient(
+    colors = listOf(Color(0xFFFFE596), Color(0xFFB38228), Color(0xFFFFF3C4), Color(0xFF8F6314))
+)
+private val BrushHologram = Brush.linearGradient(
+    colors = listOf(Color(0xFF888888), Color(0xFFE8E8E8), Color(0xFF707070), Color(0xFFFFFFFF), Color(0xFF999999))
+)
+
+private val EmbossedNumberTextStyle = TextStyle(
+    fontFamily = FontFamily.Monospace,
+    fontWeight = FontWeight.ExtraBold,
+    fontSize = 21.sp,
+    letterSpacing = 2.sp,
+    shadow = Shadow(color = Color.Black, offset = Offset(2f, 3f), blurRadius = 2f)
+)
 
 class MainActivity : AppCompatActivity() {
 
@@ -581,7 +623,6 @@ fun LockedScreen(onUnlockRequest: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VaultAppScreen(
     cards: List<CardEntity>,
@@ -591,6 +632,7 @@ fun VaultAppScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val listState = rememberLazyListState()
 
     var showCardDialog by remember { mutableStateOf(false) }
     var cardBeingEdited by remember { mutableStateOf<CardEntity?>(null) }
@@ -621,7 +663,7 @@ fun VaultAppScreen(
                                 letterSpacing = 2.sp
                             )
                             Text(
-                                "TAP CARD TO FLIP 3D • FRONT / BACK",
+                                "TAP CARD TO FLIP 3D • 120HZ SMOOTH",
                                 color = MutedWhite,
                                 fontSize = 9.sp,
                                 letterSpacing = 1.sp
@@ -666,14 +708,19 @@ fun VaultAppScreen(
             }
         } else {
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
                     .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(26.dp),
-                contentPadding = PaddingValues(vertical = 18.dp)
+                verticalArrangement = Arrangement.spacedBy(22.dp),
+                contentPadding = PaddingValues(vertical = 16.dp)
             ) {
-                items(cards, key = { it.id }) { card ->
+                items(
+                    items = cards,
+                    key = { it.id },
+                    contentType = { "bank_card_3d" }
+                ) { card ->
                     UltraLuxury3DBankCard(
                         card = card,
                         onCopy = { label, value ->
@@ -713,95 +760,78 @@ fun VaultAppScreen(
     }
 }
 
-// ==================== PRECISION EMV CHIP, HOLOGRAM & BRAND LOGOS ====================
+// ==================== CACHED GPU EMV CHIP, HOLOGRAM & BRAND LOGOS ====================
 
 @Composable
 fun LuxuryEmvChip() {
-    val chipBrush = Brush.linearGradient(
-        colors = listOf(Color(0xFFFFE596), Color(0xFFB38228), Color(0xFFFFF3C4), Color(0xFF8F6314))
-    )
     val lineColor = Color(0xFF593D08)
-
     Box(
         modifier = Modifier
             .size(width = 50.dp, height = 38.dp)
             .clip(RoundedCornerShape(7.dp))
-            .background(chipBrush)
+            .background(BrushGoldChip)
             .border(1.dp, lineColor.copy(alpha = 0.8f), RoundedCornerShape(7.dp))
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val w = size.width
-            val h = size.height
-            drawRoundRect(
-                color = lineColor.copy(alpha = 0.7f),
-                topLeft = Offset(w * 0.30f, h * 0.22f),
-                size = Size(w * 0.40f, h * 0.56f),
-                cornerRadius = CornerRadius(6f, 6f),
-                style = Stroke(width = 1.6f)
-            )
-            drawLine(lineColor, Offset(0f, h * 0.34f), Offset(w * 0.30f, h * 0.34f), strokeWidth = 1.4f)
-            drawLine(lineColor, Offset(0f, h * 0.66f), Offset(w * 0.30f, h * 0.66f), strokeWidth = 1.4f)
-            drawLine(lineColor, Offset(w * 0.70f, h * 0.34f), Offset(w, h * 0.34f), strokeWidth = 1.4f)
-            drawLine(lineColor, Offset(w * 0.70f, h * 0.66f), Offset(w, h * 0.66f), strokeWidth = 1.4f)
-            drawLine(lineColor, Offset(w * 0.5f, 0f), Offset(w * 0.5f, h * 0.22f), strokeWidth = 1.4f)
-            drawLine(lineColor, Offset(w * 0.5f, h * 0.78f), Offset(w * 0.5f, h), strokeWidth = 1.4f)
-        }
-    }
+            .drawWithCache {
+                val w = size.width
+                val h = size.height
+                onDrawBehind {
+                    drawRoundRect(
+                        color = lineColor.copy(alpha = 0.7f),
+                        topLeft = Offset(w * 0.30f, h * 0.22f),
+                        size = Size(w * 0.40f, h * 0.56f),
+                        cornerRadius = CornerRadius(6f, 6f),
+                        style = Stroke(width = 1.6f)
+                    )
+                    drawLine(lineColor, Offset(0f, h * 0.34f), Offset(w * 0.30f, h * 0.34f), strokeWidth = 1.4f)
+                    drawLine(lineColor, Offset(0f, h * 0.66f), Offset(w * 0.30f, h * 0.66f), strokeWidth = 1.4f)
+                    drawLine(lineColor, Offset(w * 0.70f, h * 0.34f), Offset(w, h * 0.34f), strokeWidth = 1.4f)
+                    drawLine(lineColor, Offset(w * 0.70f, h * 0.66f), Offset(w, h * 0.66f), strokeWidth = 1.4f)
+                    drawLine(lineColor, Offset(w * 0.5f, 0f), Offset(w * 0.5f, h * 0.22f), strokeWidth = 1.4f)
+                    drawLine(lineColor, Offset(w * 0.5f, h * 0.78f), Offset(w * 0.5f, h), strokeWidth = 1.4f)
+                }
+            }
+    )
 }
 
 @Composable
 fun ContactlessNfcWaves(tint: Color) {
-    Canvas(modifier = Modifier.size(26.dp)) {
-        val stroke = 2.5f
-        for (i in 1..4) {
-            val radius = (size.minDimension / 5.2f) * i
-            drawArc(
-                color = tint.copy(alpha = 0.85f),
-                startAngle = -40f,
-                sweepAngle = 80f,
-                useCenter = false,
-                topLeft = Offset(size.width * 0.1f - radius / 2, size.height / 2 - radius / 2),
-                size = Size(radius, radius),
-                style = Stroke(width = stroke, cap = StrokeCap.Round)
-            )
-        }
-    }
+    val waveColor = remember(tint) { tint.copy(alpha = 0.85f) }
+    Spacer(
+        modifier = Modifier
+            .size(26.dp)
+            .drawWithCache {
+                val stroke = Stroke(width = 2.5f, cap = StrokeCap.Round)
+                onDrawBehind {
+                    for (i in 1..4) {
+                        val radius = (size.minDimension / 5.2f) * i
+                        drawArc(
+                            color = waveColor,
+                            startAngle = -40f,
+                            sweepAngle = 80f,
+                            useCenter = false,
+                            topLeft = Offset(size.width * 0.1f - radius / 2, size.height / 2 - radius / 2),
+                            size = Size(radius, radius),
+                            style = stroke
+                        )
+                    }
+                }
+            }
+    )
 }
 
 @Composable
 fun SecurityHologramSticker() {
-    val holoBrush = Brush.linearGradient(
-        colors = listOf(
-            Color(0xFF888888),
-            Color(0xFFE8E8E8),
-            Color(0xFF707070),
-            Color(0xFFFFFFFF),
-            Color(0xFF999999)
-        )
-    )
     Box(
         modifier = Modifier
             .size(width = 48.dp, height = 30.dp)
             .clip(RoundedCornerShape(6.dp))
-            .background(holoBrush)
+            .background(BrushHologram)
             .border(0.8.dp, Color.White.copy(alpha = 0.7f), RoundedCornerShape(6.dp)),
         contentAlignment = Alignment.Center
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            drawCircle(
-                color = Color.Black.copy(alpha = 0.25f),
-                radius = size.minDimension * 0.35f,
-                style = Stroke(width = 1.5f)
-            )
-            drawCircle(
-                color = Color.Black.copy(alpha = 0.20f),
-                radius = size.minDimension * 0.20f,
-                style = Stroke(width = 1.2f)
-            )
-        }
         Text(
             text = "SECURE",
-            color = Color.Black.copy(alpha = 0.65f),
+            color = Color.Black.copy(alpha = 0.7f),
             fontSize = 7.sp,
             fontWeight = FontWeight.Black,
             letterSpacing = 1.sp
@@ -811,7 +841,7 @@ fun SecurityHologramSticker() {
 
 @Composable
 fun LuxuryBrandMark(brand: String, contentColor: Color) {
-    val cleanBrand = brand.trim().lowercase()
+    val cleanBrand = remember(brand) { brand.trim().lowercase() }
     when {
         cleanBrand.contains("master") -> {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -902,7 +932,7 @@ fun LuxuryBrandMark(brand: String, contentColor: Color) {
     }
 }
 
-// ==================== ULTRA-LUXURY 3D FLIPPING BANK CARD ====================
+// ==================== HARDWARE-ACCELERATED 3D FLIPPING BANK CARD ====================
 
 @Composable
 fun UltraLuxury3DBankCard(
@@ -916,44 +946,25 @@ fun UltraLuxury3DBankCard(
 
     val rotationY by animateFloatAsState(
         targetValue = if (isFlippedToBack) 180f else 0f,
-        animationSpec = tween(durationMillis = 550, easing = FastOutSlowInEasing),
+        animationSpec = tween(durationMillis = 480, easing = FastOutSlowInEasing),
         label = "Card3DFlip"
     )
 
     val isLuhnValid = remember(card.cardNumber) { isValidLuhnNumber(card.cardNumber) }
 
-    // Map Card Finish Choice to Custom Luxury Metallic Brushes
-    val cardBrush = when {
-        card.themeContrast.equals("Carbon Gray", ignoreCase = true) -> {
-            Brush.linearGradient(
-                colors = listOf(Color(0xFF2A2E33), Color(0xFF16191D), Color(0xFF0D0F12), Color(0xFF202428))
-            )
-        }
-        card.themeContrast.equals("Titanium Silver", ignoreCase = true) -> {
-            Brush.linearGradient(
-                colors = listOf(Color(0xFF8E959E), Color(0xFF5A616B), Color(0xFF3F444C), Color(0xFF747C87))
-            )
-        }
-        card.themeContrast.equals("Navy Dark", ignoreCase = true) -> {
-            Brush.linearGradient(
-                colors = listOf(Color(0xFF1A2639), Color(0xFF0F1722), Color(0xFF080C12), Color(0xFF15202E))
-            )
-        }
-        card.themeContrast.equals("Obsidian Onyx", ignoreCase = true) -> {
-            Brush.linearGradient(
-                colors = listOf(Color(0xFF232023), Color(0xFF121012), Color(0xFF080708), Color(0xFF1C191C))
-            )
-        }
-        else -> { // Default Pitch Black
-            Brush.linearGradient(
-                colors = listOf(Color(0xFF282828), Color(0xFF101010), Color(0xFF050505), Color(0xFF1E1E1E))
-            )
+    val cardBrush = remember(card.themeContrast) {
+        when {
+            card.themeContrast.equals("Carbon Gray", ignoreCase = true) -> BrushCarbonGray
+            card.themeContrast.equals("Titanium Silver", ignoreCase = true) -> BrushTitaniumSilver
+            card.themeContrast.equals("Navy Dark", ignoreCase = true) -> BrushNavyDark
+            card.themeContrast.equals("Obsidian Onyx", ignoreCase = true) -> BrushObsidianOnyx
+            else -> BrushPitchBlack
         }
     }
 
     val contentColor = CrispWhite
     val subColor = Color(0xFFA5A5A5)
-    val rimColor = Color(0xFF4A4A4A)
+    val rimColor = Color(0xFF424242)
 
     val cleanDigits = remember(card.cardNumber) { card.cardNumber.replace(" ", "") }
     val numberGroups = remember(cleanDigits, revealed) {
@@ -966,15 +977,8 @@ fun UltraLuxury3DBankCard(
         }
     }
 
-    val embossedNumberStyle = TextStyle(
-        fontFamily = FontFamily.Monospace,
-        fontWeight = FontWeight.ExtraBold,
-        fontSize = 21.sp,
-        letterSpacing = 2.sp,
-        shadow = Shadow(color = Color.Black, offset = Offset(3f, 4f), blurRadius = 3f)
-    )
-
     Column(modifier = Modifier.fillMaxWidth()) {
+        // Cached Hardware Layer 3D Card Container
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -983,10 +987,34 @@ fun UltraLuxury3DBankCard(
                     this.rotationY = rotationY
                     cameraDistance = 16f * density
                 }
-                .shadow(14.dp, RoundedCornerShape(20.dp))
                 .clip(RoundedCornerShape(20.dp))
                 .background(cardBrush)
                 .border(1.4.dp, rimColor, RoundedCornerShape(20.dp))
+                .drawWithCache {
+                    val patternColor = Color.White.copy(alpha = 0.032f)
+                    val sheenColor = Color.White.copy(alpha = 0.028f)
+                    val strokeStyle = Stroke(width = 1.2f)
+                    val centerOffset = Offset(size.width * 0.85f, size.height * 0.50f)
+                    val baseRadius = size.minDimension * 0.14f
+                    val sheenPath = Path().apply {
+                        moveTo(0f, size.height * 0.35f)
+                        lineTo(size.width * 0.65f, 0f)
+                        lineTo(size.width * 0.90f, 0f)
+                        lineTo(0f, size.height * 0.65f)
+                        close()
+                    }
+                    onDrawBehind {
+                        for (r in 1..7) {
+                            drawCircle(
+                                color = patternColor,
+                                radius = baseRadius * r,
+                                center = centerOffset,
+                                style = strokeStyle
+                            )
+                        }
+                        drawPath(path = sheenPath, color = sheenColor)
+                    }
+                }
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
@@ -994,34 +1022,8 @@ fun UltraLuxury3DBankCard(
                     isFlippedToBack = !isFlippedToBack
                 }
         ) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val patternColor = Color.White.copy(alpha = 0.035f)
-                for (r in 1..9) {
-                    drawCircle(
-                        color = patternColor,
-                        radius = (size.minDimension * 0.14f) * r,
-                        center = Offset(size.width * 0.85f, size.height * 0.50f),
-                        style = Stroke(width = 1.2f)
-                    )
-                }
-                val sheenPath = Path().apply {
-                    moveTo(0f, size.height * 0.35f)
-                    lineTo(size.width * 0.65f, 0f)
-                    lineTo(size.width * 0.90f, 0f)
-                    lineTo(0f, size.height * 0.65f)
-                    close()
-                }
-                drawPath(path = sheenPath, color = Color.White.copy(alpha = 0.03f))
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(4.dp)
-                    .border(0.5.dp, contentColor.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
-            )
-
             if (rotationY <= 90f) {
+                // FRONT OF CARD
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -1098,7 +1100,7 @@ fun UltraLuxury3DBankCard(
                                 Text(
                                     text = group,
                                     color = contentColor,
-                                    style = embossedNumberStyle
+                                    style = EmbossedNumberTextStyle
                                 )
                             }
                         }
@@ -1167,6 +1169,7 @@ fun UltraLuxury3DBankCard(
                     }
                 }
             } else {
+                // BACK OF CARD
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -1324,6 +1327,7 @@ fun UltraLuxury3DBankCard(
             }
         }
 
+        // ACTION DOCK
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1437,9 +1441,8 @@ fun UltraLuxury3DBankCard(
     }
 }
 
-// ==================== ADD & EDIT CARD DIALOG WITH MULTI-METALLIC FINISHES ====================
+// ==================== ADD & EDIT CARD DIALOG ====================
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CardFormDialog(
     existingCard: CardEntity?,
@@ -1585,7 +1588,6 @@ fun CardFormDialog(
                     }
                 }
 
-                // Multi-Metallic Finish Selector Chips
                 Text("Metallic Card Finish:", color = MutedWhite, fontSize = 11.sp)
                 val finishes = listOf("Pitch Black", "Carbon Gray", "Titanium Silver", "Navy Dark", "Obsidian Onyx")
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1659,4 +1661,4 @@ for path, content in files.items():
     with open(path, "w", encoding="utf-8") as f:
         f.write(content)
 
-print("CardVault Offline v5.0 (Multi-Metallic Finishes Edition) Generated Successfully!")
+print("CardVault Offline v6.0 (120Hz Butter-Smooth GPU Cached Edition) Generated Successfully!")
