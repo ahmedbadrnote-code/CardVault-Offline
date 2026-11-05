@@ -1,6 +1,43 @@
 import os
 
 files = {
+    ".github/workflows/build.yml": """name: Build CardVault Offline APK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Generate Native Android Project Files
+        run: python3 generate_project.py
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle and Build Release APK
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.6'
+          arguments: assembleRelease
+
+      - name: Upload Compiled Release APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardVault-Offline-Release-APK
+          path: app/build/outputs/apk/release/app-release.apk
+""",
+
     "settings.gradle.kts": """pluginManagement {
     repositories {
         google()
@@ -44,8 +81,12 @@ android.nonTransitiveRClass=true
 
 # Keep AndroidX Security Crypto & Tink
 -keep class com.google.crypto.tink.** { *; }
+-dontwarn com.google.crypto.tink.**
+-dontwarn com.google.api.client.**
+-dontwarn org.joda.time.**
 -dontwarn com.google.errorprone.annotations.**
 -dontwarn javax.annotation.**
+-dontwarn java.lang.invoke.**
 """,
 
     "app/build.gradle.kts": """plugins {
@@ -62,14 +103,13 @@ android {
         applicationId = "com.secure.cardvault"
         minSdk = 26
         targetSdk = 34
-        versionCode = 10
-        versionName = "7.1.0-RELEASE"
+        versionCode = 11
+        versionName = "7.2.0-RELEASE"
 
         vectorDrawables {
             useSupportLibrary = true
         }
 
-        // Strip out heavy PC emulator binaries (x86/x86_64) to slash APK size!
         ndk {
             abiFilters += listOf("arm64-v8a")
         }
@@ -84,9 +124,7 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
         debug {
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            isMinifyEnabled = false
         }
     }
     compileOptions {
@@ -447,8 +485,7 @@ import com.secure.cardvault.data.VaultDatabase
 import com.secure.cardvault.ui.*
 import kotlinx.coroutines.launch
 
-// ==================== 12 PRE-ALLOCATED LUXURY METALLIC BRUSHES (ZERO-LAG 120FPS) ====================
-
+// 12 PRE-ALLOCATED LUXURY METALLIC BRUSHES
 private val BrushPitchBlack = Brush.linearGradient(
     colors = listOf(Color(0xFF282828), Color(0xFF101010), Color(0xFF050505), Color(0xFF1E1E1E))
 )
@@ -1085,6 +1122,7 @@ fun UltraLuxury3DBankCard(
                 }
         ) {
             if (rotationY <= 90f) {
+                // FRONT OF CARD
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -1230,6 +1268,7 @@ fun UltraLuxury3DBankCard(
                     }
                 }
             } else {
+                // BACK OF CARD
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -1723,4 +1762,4 @@ for path, content in files.items():
     with open(path, "w", encoding="utf-8") as f:
         f.write(content)
 
-print("CardVault Offline v7.1 SLIM RELEASE Generated Successfully!")
+print("CardVault Offline v7.2 Clean R8 Release Generated Successfully!")
