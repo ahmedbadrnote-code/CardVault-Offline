@@ -1,6 +1,43 @@
 import os
 
 files = {
+    ".github/workflows/build.yml": """name: Build CardVault Offline APK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Generate Native Android Project Files
+        run: python3 generate_project.py
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle and Build Release APK
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.6'
+          arguments: assembleRelease
+
+      - name: Upload Compiled Release APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardVault-Offline-Release-APK
+          path: app/build/outputs/apk/release/app-release.apk
+""",
+
     "settings.gradle.kts": """pluginManagement {
     repositories {
         google()
@@ -32,9 +69,19 @@ kotlin.code.style=official
 android.nonTransitiveRClass=true
 """,
 
-    "app/proguard-rules.pro": """-keep class net.sqlcipher.** { *; }
+    "app/proguard-rules.pro": """# Keep SQLCipher native methods & classes safe in Release Mode
+-keep class net.sqlcipher.** { *; }
 -keep class net.sqlcipher.database.** { *; }
+-keep interface net.sqlcipher.** { *; }
+
+# Keep Room Database Entities & DAOs
+-keep class * extends androidx.room.RoomDatabase { *; }
+-keep @androidx.room.Entity class * { *; }
 -keep class com.secure.cardvault.data.** { *; }
+
+# Keep AndroidX Security Crypto & Tink
+-keep class com.google.crypto.tink.** { *; }
+-dontwarn com.google.errorprone.annotations.**
 -dontwarn javax.annotation.**
 """,
 
@@ -52,8 +99,8 @@ android {
         applicationId = "com.secure.cardvault"
         minSdk = 26
         targetSdk = 34
-        versionCode = 8
-        versionName = "6.0.0"
+        versionCode = 9
+        versionName = "7.0.0-RELEASE"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -64,6 +111,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            isDebuggable = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.getByName("debug")
         }
@@ -429,7 +477,9 @@ import com.secure.cardvault.data.VaultDatabase
 import com.secure.cardvault.ui.*
 import kotlinx.coroutines.launch
 
-// Pre-allocated Static Brushes & Styles for Zero-Allocation 120fps Scrolling
+// ==================== 12 PRE-ALLOCATED LUXURY METALLIC BRUSHES (ZERO-LAG 120FPS) ====================
+
+// Original 5 Finishes
 private val BrushPitchBlack = Brush.linearGradient(
     colors = listOf(Color(0xFF282828), Color(0xFF101010), Color(0xFF050505), Color(0xFF1E1E1E))
 )
@@ -445,6 +495,30 @@ private val BrushNavyDark = Brush.linearGradient(
 private val BrushObsidianOnyx = Brush.linearGradient(
     colors = listOf(Color(0xFF232023), Color(0xFF121012), Color(0xFF080708), Color(0xFF1C191C))
 )
+
+// New 7 Luxury Metallic Finishes
+private val BrushEmeraldGreen = Brush.linearGradient(
+    colors = listOf(Color(0xFF133829), Color(0xFF0A2118), Color(0xFF05130D), Color(0xFF184532))
+)
+private val BrushRoyalGold = Brush.linearGradient(
+    colors = listOf(Color(0xFF634F21), Color(0xFF3B2E11), Color(0xFF241B08), Color(0xFF7A6229))
+)
+private val BrushCrimsonRuby = Brush.linearGradient(
+    colors = listOf(Color(0xFF4A151B), Color(0xFF2B0B0E), Color(0xFF170507), Color(0xFF5C1A22))
+)
+private val BrushRoyalAmethyst = Brush.linearGradient(
+    colors = listOf(Color(0xFF2E1A3B), Color(0xFF1B0E24), Color(0xFF0F0714), Color(0xFF3B224C))
+)
+private val BrushCopperBronze = Brush.linearGradient(
+    colors = listOf(Color(0xFF4F2D1F), Color(0xFF2E1910), Color(0xFF1A0D08), Color(0xFF633927))
+)
+private val BrushMidnightTeal = Brush.linearGradient(
+    colors = listOf(Color(0xFF12353B), Color(0xFF0A1F24), Color(0xFF051114), Color(0xFF17434A))
+)
+private val BrushChampagneRose = Brush.linearGradient(
+    colors = listOf(Color(0xFF4F3236), Color(0xFF2E1C1E), Color(0xFF1A0F10), Color(0xFF613E42))
+)
+
 private val BrushGoldChip = Brush.linearGradient(
     colors = listOf(Color(0xFFFFE596), Color(0xFFB38228), Color(0xFFFFF3C4), Color(0xFF8F6314))
 )
@@ -458,6 +532,21 @@ private val EmbossedNumberTextStyle = TextStyle(
     fontSize = 21.sp,
     letterSpacing = 2.sp,
     shadow = Shadow(color = Color.Black, offset = Offset(2f, 3f), blurRadius = 2f)
+)
+
+val AllCardFinishes = listOf(
+    "Pitch Black",
+    "Carbon Gray",
+    "Titanium Silver",
+    "Navy Dark",
+    "Obsidian Onyx",
+    "Emerald Green",
+    "Royal Gold",
+    "Crimson Ruby",
+    "Royal Amethyst",
+    "Copper Bronze",
+    "Midnight Teal",
+    "Champagne Rose"
 )
 
 class MainActivity : AppCompatActivity() {
@@ -663,7 +752,7 @@ fun VaultAppScreen(
                                 letterSpacing = 2.sp
                             )
                             Text(
-                                "TAP CARD TO FLIP 3D • 120HZ SMOOTH",
+                                "RELEASE EDITION • 12 METALLIC FINISHES",
                                 color = MutedWhite,
                                 fontSize = 9.sp,
                                 letterSpacing = 1.sp
@@ -946,7 +1035,7 @@ fun UltraLuxury3DBankCard(
 
     val rotationY by animateFloatAsState(
         targetValue = if (isFlippedToBack) 180f else 0f,
-        animationSpec = tween(durationMillis = 480, easing = FastOutSlowInEasing),
+        animationSpec = tween(durationMillis = 460, easing = FastOutSlowInEasing),
         label = "Card3DFlip"
     )
 
@@ -958,13 +1047,20 @@ fun UltraLuxury3DBankCard(
             card.themeContrast.equals("Titanium Silver", ignoreCase = true) -> BrushTitaniumSilver
             card.themeContrast.equals("Navy Dark", ignoreCase = true) -> BrushNavyDark
             card.themeContrast.equals("Obsidian Onyx", ignoreCase = true) -> BrushObsidianOnyx
+            card.themeContrast.equals("Emerald Green", ignoreCase = true) -> BrushEmeraldGreen
+            card.themeContrast.equals("Royal Gold", ignoreCase = true) -> BrushRoyalGold
+            card.themeContrast.equals("Crimson Ruby", ignoreCase = true) -> BrushCrimsonRuby
+            card.themeContrast.equals("Royal Amethyst", ignoreCase = true) -> BrushRoyalAmethyst
+            card.themeContrast.equals("Copper Bronze", ignoreCase = true) -> BrushCopperBronze
+            card.themeContrast.equals("Midnight Teal", ignoreCase = true) -> BrushMidnightTeal
+            card.themeContrast.equals("Champagne Rose", ignoreCase = true) -> BrushChampagneRose
             else -> BrushPitchBlack
         }
     }
 
     val contentColor = CrispWhite
-    val subColor = Color(0xFFA5A5A5)
-    val rimColor = Color(0xFF424242)
+    val subColor = Color(0xFFB0B0B0)
+    val rimColor = Color(0xFF484848)
 
     val cleanDigits = remember(card.cardNumber) { card.cardNumber.replace(" ", "") }
     val numberGroups = remember(cleanDigits, revealed) {
@@ -978,7 +1074,6 @@ fun UltraLuxury3DBankCard(
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        // Cached Hardware Layer 3D Card Container
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1251,7 +1346,7 @@ fun UltraLuxury3DBankCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp),
-                        color = contentColor.copy(alpha = 0.07f),
+                        color = contentColor.copy(alpha = 0.08f),
                         shape = RoundedCornerShape(8.dp),
                         border = BorderStroke(0.7.dp, contentColor.copy(alpha = 0.22f))
                     ) {
@@ -1441,7 +1536,7 @@ fun UltraLuxury3DBankCard(
     }
 }
 
-// ==================== ADD & EDIT CARD DIALOG ====================
+// ==================== ADD & EDIT CARD DIALOG (WITH 12 METALLIC FINISHES) ====================
 
 @Composable
 fun CardFormDialog(
@@ -1588,16 +1683,19 @@ fun CardFormDialog(
                     }
                 }
 
-                Text("Metallic Card Finish:", color = MutedWhite, fontSize = 11.sp)
-                val finishes = listOf("Pitch Black", "Carbon Gray", "Titanium Silver", "Navy Dark", "Obsidian Onyx")
+                Text("Metallic Card Finish (12 Luxury Styles):", color = MutedWhite, fontSize = 11.sp)
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    finishes.chunked(3).forEach { rowFinishes ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    AllCardFinishes.chunked(2).forEach { rowFinishes ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
                             rowFinishes.forEach { finishOption ->
                                 FilterChip(
                                     selected = themeContrast.equals(finishOption, ignoreCase = true),
                                     onClick = { themeContrast = finishOption },
-                                    label = { Text(finishOption, fontSize = 10.sp) }
+                                    label = { Text(finishOption, fontSize = 11.sp) },
+                                    modifier = Modifier.weight(1f)
                                 )
                             }
                         }
@@ -1661,4 +1759,4 @@ for path, content in files.items():
     with open(path, "w", encoding="utf-8") as f:
         f.write(content)
 
-print("CardVault Offline v6.0 (120Hz Butter-Smooth GPU Cached Edition) Generated Successfully!")
+print("CardVault Offline v7.0 RELEASE (12 Metallic Finishes & R8 Optimized) Generated Successfully!")
