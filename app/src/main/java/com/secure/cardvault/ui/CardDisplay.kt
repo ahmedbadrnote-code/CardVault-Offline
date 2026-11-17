@@ -76,7 +76,7 @@ private val BrushHologram = Brush.linearGradient(
     colors = listOf(Color(0xFF888888), Color(0xFFE8E8E8), Color(0xFF707070), Color(0xFFFFFFFF), Color(0xFF999999))
 )
 
-private val EmbossedNumberTextStyle = TextStyle(
+internal val EmbossedNumberTextStyle = TextStyle(
     fontFamily = FontFamily.Monospace,
     fontWeight = FontWeight.ExtraBold,
     fontSize = 21.sp,
