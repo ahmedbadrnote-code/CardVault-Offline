@@ -82,7 +82,7 @@ internal fun CardFrontFace(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                LuxuryEmvChip()
+                LuxuryEmvChip(accentColor = accentColor)
                 Spacer(modifier = Modifier.width(14.dp))
                 ContactlessNfcWaves(tint = contentColor)
             }
