@@ -87,12 +87,12 @@ internal fun CardFrontFace(
             ContactlessNfcWaves(tint = contentColor)
         }
 
-        // Fixed, compact gaps between the four PAN groups prevent excessive stretching.
+        // The PAN starts on the same left alignment as the chip and cardholder details.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 1.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             numberGroups.forEach { group ->
