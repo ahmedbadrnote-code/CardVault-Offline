@@ -2,7 +2,7 @@ name: Build CardVault Offline APK
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "main", "master", "refactor/standard-android-project" ]
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
