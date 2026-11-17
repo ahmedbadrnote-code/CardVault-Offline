@@ -38,7 +38,7 @@ fun LuxuryEmvChip(accentColor: Color = Color(0xFFB38228)) {
         modifier = Modifier
             .size(width = 50.dp, height = 38.dp)
             .clip(RoundedCornerShape(7.dp))
-            .background(BrushGoldChip)
+            .background(Brush.linearGradient(listOf(accentColor.copy(alpha = 0.98f), accentColor.copy(alpha = 0.62f), Color.White, accentColor.copy(alpha = 0.82f))))
             .border(1.dp, lineColor.copy(alpha = 0.8f), RoundedCornerShape(7.dp))
             .drawWithCache {
                 val w = size.width
