@@ -10,8 +10,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -47,8 +50,33 @@ internal fun CardBackFace(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(42.dp)
-                    .background(Color(0xFF030303))
-                    .border(0.5.dp, Color(0xFF2B2B2B))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color(0xFF08090A),
+                                Color(0xFF242628),
+                                Color(0xFF050607),
+                                Color(0xFF17191B)
+                            )
+                        )
+                    )
+                    .drawWithCache {
+                        onDrawBehind {
+                            drawLine(
+                                Color.White.copy(alpha = 0.18f),
+                                Offset(0f, size.height * 0.12f),
+                                Offset(size.width, size.height * 0.12f),
+                                1f
+                            )
+                            drawLine(
+                                Color.Black.copy(alpha = 0.65f),
+                                Offset(0f, size.height * 0.88f),
+                                Offset(size.width, size.height * 0.88f),
+                                1.2f
+                            )
+                        }
+                    }
+                    .border(0.5.dp, Color(0xFF3B3E40))
             )
         }
 
@@ -68,7 +96,24 @@ internal fun CardBackFace(
                         .weight(1f)
                         .height(34.dp)
                         .clip(RoundedCornerShape(topStart = 4.dp, bottomStart = 4.dp))
-                        .background(Color(0xFFE5E5E5))
+                        .background(
+                            Brush.linearGradient(
+                                listOf(Color(0xFFF8F8F5), Color(0xFFD9D9D5), Color(0xFFF1F1ED))
+                            )
+                        )
+                        .drawWithCache {
+                            onDrawBehind {
+                                for (i in 0..8) {
+                                    val y = size.height * (0.12f + i * 0.095f)
+                                    drawLine(
+                                        Color(0xFF777777).copy(alpha = 0.12f),
+                                        Offset(size.width * 0.04f, y),
+                                        Offset(size.width * 0.96f, y),
+                                        0.55f
+                                    )
+                                }
+                            }
+                        }
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
