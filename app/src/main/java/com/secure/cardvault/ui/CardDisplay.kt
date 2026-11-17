@@ -158,6 +158,60 @@ fun UltraLuxury3DBankCard(
                                 }
                             }
                         }
+                        // Layered studio lighting, fine material grain and a restrained machined bevel.
+                        drawRect(
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.15f),
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.19f)
+                                ),
+                                start = Offset(0f, 0f),
+                                end = Offset(size.width * 0.72f, size.height)
+                            )
+                        )
+                        drawRect(
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    finish.accent.copy(alpha = 0.13f),
+                                    Color.Transparent,
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.10f)
+                                ),
+                                start = Offset(0f, size.height * 0.18f),
+                                end = Offset(size.width, size.height * 0.92f)
+                            )
+                        )
+                        // A deterministic micro-grain gives matte and brushed finishes a tactile surface.
+                        for (i in 0 until 150) {
+                            val x = ((i * 73) % 997) / 997f * size.width
+                            val y = ((i * 193) % 991) / 991f * size.height
+                            drawCircle(
+                                color = if (i % 3 == 0) Color.White.copy(alpha = 0.035f)
+                                else Color.Black.copy(alpha = 0.025f),
+                                radius = if (i % 5 == 0) 1.0f else 0.55f,
+                                center = Offset(x, y)
+                            )
+                        }
+                        // Fine inner bevel: brighter on the light-facing edge, darker underneath.
+                        drawLine(
+                            color = Color.White.copy(alpha = 0.24f),
+                            start = Offset(size.width * 0.045f, size.height * 0.075f),
+                            end = Offset(size.width * 0.955f, size.height * 0.075f),
+                            strokeWidth = 1.15f
+                        )
+                        drawLine(
+                            color = Color.White.copy(alpha = 0.15f),
+                            start = Offset(size.width * 0.035f, size.height * 0.09f),
+                            end = Offset(size.width * 0.035f, size.height * 0.90f),
+                            strokeWidth = 1.0f
+                        )
+                        drawLine(
+                            color = Color.Black.copy(alpha = 0.25f),
+                            start = Offset(size.width * 0.045f, size.height * 0.94f),
+                            end = Offset(size.width * 0.955f, size.height * 0.94f),
+                            strokeWidth = 1.25f
+                        )
                         drawPath(diagonal, sheenColor.copy(alpha = 0.55f))
                         drawRoundRect(
                             color = finish.accent.copy(alpha = 0.12f),
