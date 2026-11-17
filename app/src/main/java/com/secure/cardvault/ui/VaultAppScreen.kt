@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.secure.cardvault.data.CardEntity
 import com.secure.cardvault.utils.copyToClipboard
+import kotlinx.coroutines.launch
 
 @Composable
 fun VaultAppScreen(
