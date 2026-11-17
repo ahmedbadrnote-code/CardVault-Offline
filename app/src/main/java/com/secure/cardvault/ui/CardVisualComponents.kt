@@ -32,8 +32,8 @@ private val BrushHologram = Brush.linearGradient(
 )
 
 @Composable
-fun LuxuryEmvChip() {
-    val lineColor = Color(0xFF593D08)
+fun LuxuryEmvChip(accentColor: Color = Color(0xFFB38228)) {
+    val lineColor = accentColor
     Box(
         modifier = Modifier
             .size(width = 50.dp, height = 38.dp)
@@ -94,7 +94,7 @@ fun SecurityHologramSticker(accentColor: Color = Color(0xFFB8C6CC)) {
         modifier = Modifier
             .size(width = 48.dp, height = 30.dp)
             .clip(RoundedCornerShape(6.dp))
-            .background(BrushHologram)
+            .background(Brush.linearGradient(listOf(accentColor.copy(alpha = 0.95f), Color.White, accentColor.copy(alpha = 0.65f), Color(0xFF727B83))))
             .border(0.8.dp, Color.White.copy(alpha = 0.7f), RoundedCornerShape(6.dp)),
         contentAlignment = Alignment.Center
     ) {
