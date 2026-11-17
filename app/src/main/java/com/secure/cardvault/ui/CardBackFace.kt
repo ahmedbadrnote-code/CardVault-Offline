@@ -31,7 +31,7 @@ internal fun CardBackFace(
         modifier = Modifier
             .fillMaxSize()
             .graphicsLayer { this.rotationY = 180f }
-            .padding(vertical = 14.dp),
+            .padding(vertical = 13.dp),
         verticalArrangement = Arrangement.SpaceEvenly
     ) {
         // A realistic full-width magnetic stripe in the upper portion of the reverse.
@@ -39,7 +39,7 @@ internal fun CardBackFace(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(39.dp)
+                .height(43.dp)
                 .background(
                     Brush.verticalGradient(
                         listOf(
@@ -73,14 +73,14 @@ internal fun CardBackFace(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = 17.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(9.dp)
         ) {
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .height(37.dp)
+                    .height(43.dp)
                     .clip(RoundedCornerShape(3.dp))
                     .background(
                         Brush.linearGradient(
@@ -106,7 +106,7 @@ internal fun CardBackFace(
                 Text(
                     text = "AUTHORIZED SIGNATURE",
                     color = Color(0xFF555555),
-                    fontSize = 6.sp,
+                    fontSize = 7.sp,
                     letterSpacing = 0.55.sp
                 )
                 Spacer(modifier = Modifier.fillMaxWidth().height(1.dp))
@@ -114,7 +114,7 @@ internal fun CardBackFace(
 
             Column(
                 modifier = Modifier
-                    .width(42.dp)
+                    .width(48.dp)
                     .height(37.dp)
                     .clip(RoundedCornerShape(3.dp))
                     .background(Color(0xFFF7F7F4))
@@ -125,7 +125,7 @@ internal fun CardBackFace(
                 Text(
                     text = if (revealed) card.cvv else "•••",
                     color = Color(0xFF222222),
-                    fontSize = 12.sp,
+                    fontSize = 14.sp,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Black
                 )

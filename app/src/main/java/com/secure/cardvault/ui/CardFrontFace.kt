@@ -29,10 +29,10 @@ internal fun CardFrontFace(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 22.dp, vertical = 16.dp),
+            .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // Issuer identity and card category stay in the top band.
+        // Issuer and card category share a balanced top band.
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -46,53 +46,53 @@ internal fun CardFrontFace(
                     imageVector = Icons.Default.AccountBalance,
                     contentDescription = null,
                     tint = contentColor,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(21.dp)
                 )
-                Spacer(modifier = Modifier.width(7.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = card.bankName.uppercase(),
                     color = contentColor,
                     fontWeight = FontWeight.Black,
-                    fontSize = 15.sp,
-                    letterSpacing = 1.5.sp,
+                    fontSize = 16.sp,
+                    letterSpacing = 1.25.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
             Surface(
                 color = contentColor.copy(alpha = 0.08f),
-                shape = RoundedCornerShape(6.dp),
-                border = BorderStroke(0.8.dp, contentColor.copy(alpha = 0.35f))
+                shape = RoundedCornerShape(7.dp),
+                border = BorderStroke(0.9.dp, contentColor.copy(alpha = 0.38f))
             ) {
                 Text(
                     text = card.cardType.uppercase(),
                     color = contentColor,
-                    fontSize = 7.sp,
+                    fontSize = 8.sp,
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.1.sp,
-                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp)
+                    letterSpacing = 0.9.sp,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
                 )
             }
         }
 
-        // EMV chip sits on the left, around the vertical center of a landscape card.
+        // Slightly larger EMV chip and contactless mark, centered in the card's left zone.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 2.dp),
+                .padding(start = 3.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             LuxuryEmvChip(accentColor = accentColor)
-            Spacer(modifier = Modifier.width(13.dp))
+            Spacer(modifier = Modifier.width(14.dp))
             ContactlessNfcWaves(tint = contentColor)
         }
 
-        // The embossed PAN is placed below the chip, as on conventional bank cards.
+        // Fixed, compact gaps between the four PAN groups prevent excessive stretching.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 1.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             numberGroups.forEach { group ->
@@ -100,15 +100,16 @@ internal fun CardFrontFace(
                     text = group,
                     color = contentColor,
                     style = EmbossedNumberTextStyle.copy(
-                        fontSize = 18.sp,
-                        letterSpacing = 1.2.sp
+                        fontSize = 19.sp,
+                        letterSpacing = 0.8.sp
                     ),
-                    maxLines = 1
+                    maxLines = 1,
+                    softWrap = false
                 )
             }
         }
 
-        // Expiry and cardholder details form the lower band; the network mark anchors the right.
+        // Cardholder and expiry details use a larger, consistent type scale.
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -116,20 +117,20 @@ internal fun CardFrontFace(
         ) {
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(5.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "VALID THRU",
                         color = subColor,
-                        fontSize = 7.sp,
+                        fontSize = 8.sp,
                         letterSpacing = 0.8.sp
                     )
-                    Spacer(modifier = Modifier.width(7.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = card.expiryDate,
                         color = contentColor,
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold
                     )
@@ -137,10 +138,10 @@ internal fun CardFrontFace(
                 Text(
                     text = card.cardholderName.uppercase(),
                     color = contentColor,
-                    fontSize = 11.sp,
+                    fontSize = 12.sp,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.1.sp,
+                    letterSpacing = 0.9.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

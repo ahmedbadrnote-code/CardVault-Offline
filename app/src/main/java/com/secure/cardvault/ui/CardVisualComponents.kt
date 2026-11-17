@@ -44,7 +44,7 @@ fun LuxuryEmvChip(accentColor: Color = Color(0xFFB38228)) {
     )
     Box(
         modifier = Modifier
-            .size(width = 51.dp, height = 39.dp)
+            .size(width = 55.dp, height = 42.dp)
             .clip(RoundedCornerShape(7.dp))
             .background(metal)
             .border(1.dp, Color.White.copy(alpha = 0.72f), RoundedCornerShape(7.dp))
@@ -85,7 +85,7 @@ fun ContactlessNfcWaves(tint: Color) {
     val waveColor = remember(tint) { tint.copy(alpha = 0.85f) }
     Spacer(
         modifier = Modifier
-            .size(26.dp)
+            .size(29.dp)
             .drawWithCache {
                 val stroke = Stroke(width = 2.5f, cap = StrokeCap.Round)
                 onDrawBehind {
@@ -110,7 +110,7 @@ fun ContactlessNfcWaves(tint: Color) {
 fun SecurityHologramSticker(accentColor: Color = Color(0xFFB8C6CC)) {
     Box(
         modifier = Modifier
-            .size(width = 49.dp, height = 31.dp)
+            .size(width = 55.dp, height = 35.dp)
             .clip(RoundedCornerShape(5.dp))
             .background(
                 Brush.linearGradient(
@@ -162,7 +162,7 @@ fun SecurityHologramSticker(accentColor: Color = Color(0xFFB8C6CC)) {
         Text(
             text = "SECURE",
             color = Color(0xFF17202B).copy(alpha = 0.86f),
-            fontSize = 7.sp,
+            fontSize = 8.sp,
             fontWeight = FontWeight.Black,
             letterSpacing = 1.sp
         )
@@ -175,10 +175,10 @@ fun LuxuryBrandMark(brand: String, contentColor: Color) {
     when {
         cleanBrand.contains("master") -> {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(modifier = Modifier.width(44.dp).height(26.dp)) {
+                Box(modifier = Modifier.width(50.dp).height(30.dp)) {
                     Box(
                         modifier = Modifier
-                            .size(26.dp)
+                            .size(30.dp)
                             .align(Alignment.CenterStart)
                             .background(contentColor.copy(alpha = 0.85f), CircleShape)
                     )
@@ -193,7 +193,7 @@ fun LuxuryBrandMark(brand: String, contentColor: Color) {
                 Text(
                     text = "mastercard",
                     color = contentColor,
-                    fontSize = 8.sp,
+                    fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.5.sp
                 )
@@ -204,7 +204,7 @@ fun LuxuryBrandMark(brand: String, contentColor: Color) {
                 Text(
                     text = "VISA",
                     color = contentColor,
-                    fontSize = 25.sp,
+                    fontSize = 28.sp,
                     fontWeight = FontWeight.Black,
                     fontStyle = FontStyle.Italic,
                     letterSpacing = 1.2.sp
@@ -212,7 +212,7 @@ fun LuxuryBrandMark(brand: String, contentColor: Color) {
                 Text(
                     text = "INFINITE",
                     color = contentColor.copy(alpha = 0.7f),
-                    fontSize = 7.sp,
+                    fontSize = 8.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.5.sp
                 )
@@ -227,7 +227,7 @@ fun LuxuryBrandMark(brand: String, contentColor: Color) {
                 Text(
                     text = "MEEZA",
                     color = contentColor,
-                    fontSize = 14.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 1.5.sp,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
@@ -243,7 +243,7 @@ fun LuxuryBrandMark(brand: String, contentColor: Color) {
                 Text(
                     text = "AMERICAN EXPRESS",
                     color = contentColor,
-                    fontSize = 9.sp,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 1.sp,
                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
@@ -254,7 +254,7 @@ fun LuxuryBrandMark(brand: String, contentColor: Color) {
             Text(
                 text = brand.uppercase(),
                 color = contentColor,
-                fontSize = 17.sp,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = 1.5.sp
             )
