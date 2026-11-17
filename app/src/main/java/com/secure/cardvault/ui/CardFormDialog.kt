@@ -34,7 +34,7 @@ fun CardFormDialog(
     var atmPin by remember { mutableStateOf(existingCard?.atmPin ?: "") }
     var cardType by remember { mutableStateOf(existingCard?.cardType ?: "Credit") }
     var brand by remember { mutableStateOf(existingCard?.brand ?: "Visa") }
-    var themeContrast by remember { mutableStateOf(existingCard?.themeContrast ?: "Pitch Black") }
+    var themeContrast by remember { mutableStateOf(existingCard?.themeContrast?.takeIf { name -> AllCardFinishes.any { it.equals(name, ignoreCase = true) } } ?: "Obsidian Reserve") }
     var notes by remember { mutableStateOf(existingCard?.notes ?: "") }
 
     val autoDetectedBrand = remember(cardNumber) { detectCardBrandAutomatically(cardNumber) }
