@@ -101,7 +101,7 @@ internal fun CardBackFace(
             }
 
             Spacer(modifier = Modifier.width(12.dp))
-            SecurityHologramSticker()
+            SecurityHologramSticker(accentColor = accentColor)
         }
 
         Surface(
