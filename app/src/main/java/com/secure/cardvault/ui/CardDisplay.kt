@@ -84,6 +84,7 @@ private val EmbossedNumberTextStyle = TextStyle(
     shadow = Shadow(color = Color.Black, offset = Offset(2f, 3f), blurRadius = 2f)
 )
 
+@Composable
 fun UltraLuxury3DBankCard(
     card: CardEntity,
     onCopy: (String, String) -> Unit,
