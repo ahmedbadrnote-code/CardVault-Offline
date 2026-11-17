@@ -1,8 +1,5 @@
 package com.secure.cardvault
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.compose.setContent
@@ -59,6 +56,7 @@ import com.secure.cardvault.data.CardEntity
 import com.secure.cardvault.data.VaultDatabase
 import com.secure.cardvault.utils.detectCardBrandAutomatically
 import com.secure.cardvault.utils.isValidLuhnNumber
+import com.secure.cardvault.utils.copyToClipboard
 import com.secure.cardvault.ui.*
 import kotlinx.coroutines.launch
 
@@ -1289,8 +1287,3 @@ fun CardFormDialog(
     )
 }
 
-fun copyToClipboard(context: Context, label: String, text: String) {
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    val clip = ClipData.newPlainText(label, text)
-    clipboard.setPrimaryClip(clip)
-}
