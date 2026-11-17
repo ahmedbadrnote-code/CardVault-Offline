@@ -29,7 +29,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.secure.cardvault.data.CardEntity
-import com.secure.cardvault.utils.isValidLuhnNumber
 
 // Embossed number styling.
 internal val EmbossedNumberTextStyle = TextStyle(
@@ -55,8 +54,6 @@ fun UltraLuxury3DBankCard(
         animationSpec = tween(durationMillis = 460, easing = FastOutSlowInEasing),
         label = "Card3DFlip"
     )
-
-    val isLuhnValid = remember(card.cardNumber) { isValidLuhnNumber(card.cardNumber) }
 
     val finish = remember(card.themeContrast) { cardFinishStyle(card.themeContrast) }
     val cardBrush = remember(finish) { Brush.linearGradient(finish.gradient) }
@@ -234,9 +231,7 @@ fun UltraLuxury3DBankCard(
                     card = card,
                     contentColor = contentColor,
                     subColor = subColor,
-                    isLuhnValid = isLuhnValid,
                     numberGroups = numberGroups,
-                    cleanDigits = cleanDigits,
                     revealed = revealed,
                     accentColor = finish.accent
                 )
