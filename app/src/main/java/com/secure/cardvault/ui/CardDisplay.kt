@@ -100,7 +100,7 @@ fun UltraLuxury3DBankCard(
                     }
                     onDrawBehind {
                         when (finish.texture) {
-                            0 -> for (r in 1..7) drawCircle(patternColor, step * r, Offset(size.width * 0.86f, size.height * 0.5f), strokeStyle)
+                            0 -> for (r in 1..7) drawCircle(patternColor, step * r, Offset(size.width * 0.86f, size.height * 0.5f), style = strokeStyle)
                             1 -> for (i in -8..14) drawLine(patternColor, Offset(i * step, 0f), Offset(i * step - size.height, size.height), 1.1f)
                             2 -> {
                                 for (i in 1..8) {
@@ -137,14 +137,17 @@ fun UltraLuxury3DBankCard(
                     isLuhnValid = isLuhnValid,
                     numberGroups = numberGroups,
                     cleanDigits = cleanDigits,
-                    revealed = revealed
+                    revealed = revealed,
+                    accentColor = finish.accent,
+                    finishName = finish.name
                 )
             } else {
                 CardBackFace(
                     card = card,
                     contentColor = contentColor,
                     subColor = subColor,
-                    revealed = revealed
+                    revealed = revealed,
+                    accentColor = finish.accent
                 )
             }
         }
