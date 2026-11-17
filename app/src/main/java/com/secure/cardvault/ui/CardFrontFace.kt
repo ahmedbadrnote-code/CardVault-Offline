@@ -28,7 +28,9 @@ internal fun CardFrontFace(
     isLuhnValid: Boolean,
     numberGroups: List<String>,
     cleanDigits: String,
-    revealed: Boolean
+    revealed: Boolean,
+    accentColor: Color,
+    finishName: String
 ) {
     Column(
         modifier = Modifier
@@ -66,7 +68,7 @@ internal fun CardFrontFace(
                 border = BorderStroke(0.8.dp, contentColor.copy(alpha = 0.35f))
             ) {
                 Text(
-                    text = "${card.cardType.uppercase()} • ${card.themeContrast.uppercase()}",
+                    text = "${card.cardType.uppercase()} • ${finishName.uppercase()}",
                     color = contentColor,
                     fontSize = 8.sp,
                     fontWeight = FontWeight.ExtraBold,
