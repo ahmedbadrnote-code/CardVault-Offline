@@ -116,31 +116,25 @@ internal fun CardBackFace(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            Column(
+            Box(
                 modifier = Modifier
-                    .width(58.dp)
+                    .width(68.dp)
                     .height(34.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(Color(0xFFFFFFFF))
+                    .background(Color.White)
                     .border(0.7.dp, Color(0xFFB8B8B4), RoundedCornerShape(2.dp))
-                    .padding(horizontal = 5.dp, vertical = 2.dp),
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.Center
+                    .padding(horizontal = 4.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "CVV",
-                    color = Color(0xFF555555),
-                    fontSize = 7.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp
-                )
                 Text(
                     text = if (revealed) card.cvv.trim().ifBlank { "—" } else "•••",
                     color = Color(0xFF111111),
-                    fontSize = 14.sp,
+                    fontSize = 15.sp,
+                    lineHeight = 17.sp,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Black,
-                    maxLines = 1
+                    maxLines = 1,
+                    softWrap = false
                 )
             }
         }
