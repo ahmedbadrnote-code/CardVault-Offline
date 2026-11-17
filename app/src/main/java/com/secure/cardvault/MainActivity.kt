@@ -303,7 +303,6 @@ fun VaultAppScreen(
 // ==================== HARDWARE-ACCELERATED 3D FLIPPING BANK CARD ====================
 
 @Composable
-@Composable
 fun CardFormDialog(
     existingCard: CardEntity?,
     onDismiss: () -> Unit,
