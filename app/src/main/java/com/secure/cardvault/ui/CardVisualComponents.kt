@@ -33,30 +33,48 @@ private val BrushHologram = Brush.linearGradient(
 
 @Composable
 fun LuxuryEmvChip(accentColor: Color = Color(0xFFB38228)) {
-    val lineColor = accentColor
+    val metal = Brush.linearGradient(
+        colors = listOf(
+            Color(0xFFFFF4C9),
+            accentColor.copy(alpha = 0.98f),
+            Color(0xFF6F5527),
+            Color(0xFFE8D49A),
+            accentColor
+        )
+    )
     Box(
         modifier = Modifier
-            .size(width = 50.dp, height = 38.dp)
+            .size(width = 51.dp, height = 39.dp)
             .clip(RoundedCornerShape(7.dp))
-            .background(Brush.linearGradient(listOf(accentColor.copy(alpha = 0.98f), accentColor.copy(alpha = 0.62f), Color.White, accentColor.copy(alpha = 0.82f))))
-            .border(1.dp, lineColor.copy(alpha = 0.8f), RoundedCornerShape(7.dp))
+            .background(metal)
+            .border(1.dp, Color.White.copy(alpha = 0.72f), RoundedCornerShape(7.dp))
             .drawWithCache {
                 val w = size.width
                 val h = size.height
+                val line = Color(0xFF5B4827).copy(alpha = 0.78f)
+                val inner = RoundedCornerShape(4.dp)
                 onDrawBehind {
                     drawRoundRect(
-                        color = lineColor.copy(alpha = 0.7f),
-                        topLeft = Offset(w * 0.30f, h * 0.22f),
-                        size = Size(w * 0.40f, h * 0.56f),
-                        cornerRadius = CornerRadius(6f, 6f),
-                        style = Stroke(width = 1.6f)
+                        color = Color.White.copy(alpha = 0.34f),
+                        topLeft = Offset(w * 0.055f, h * 0.08f),
+                        size = Size(w * 0.89f, h * 0.84f),
+                        cornerRadius = CornerRadius(5f),
+                        style = Stroke(width = 1.0f)
                     )
-                    drawLine(lineColor, Offset(0f, h * 0.34f), Offset(w * 0.30f, h * 0.34f), strokeWidth = 1.4f)
-                    drawLine(lineColor, Offset(0f, h * 0.66f), Offset(w * 0.30f, h * 0.66f), strokeWidth = 1.4f)
-                    drawLine(lineColor, Offset(w * 0.70f, h * 0.34f), Offset(w, h * 0.34f), strokeWidth = 1.4f)
-                    drawLine(lineColor, Offset(w * 0.70f, h * 0.66f), Offset(w, h * 0.66f), strokeWidth = 1.4f)
-                    drawLine(lineColor, Offset(w * 0.5f, 0f), Offset(w * 0.5f, h * 0.22f), strokeWidth = 1.4f)
-                    drawLine(lineColor, Offset(w * 0.5f, h * 0.78f), Offset(w * 0.5f, h), strokeWidth = 1.4f)
+                    drawRoundRect(
+                        color = line,
+                        topLeft = Offset(w * 0.30f, h * 0.20f),
+                        size = Size(w * 0.40f, h * 0.60f),
+                        cornerRadius = CornerRadius(5f),
+                        style = Stroke(width = 1.45f)
+                    )
+                    drawLine(line, Offset(0f, h * 0.35f), Offset(w * 0.30f, h * 0.35f), 1.35f)
+                    drawLine(line, Offset(0f, h * 0.65f), Offset(w * 0.30f, h * 0.65f), 1.35f)
+                    drawLine(line, Offset(w * 0.70f, h * 0.35f), Offset(w, h * 0.35f), 1.35f)
+                    drawLine(line, Offset(w * 0.70f, h * 0.65f), Offset(w, h * 0.65f), 1.35f)
+                    drawLine(line, Offset(w * 0.50f, 0f), Offset(w * 0.50f, h * 0.20f), 1.35f)
+                    drawLine(line, Offset(w * 0.50f, h * 0.80f), Offset(w * 0.50f, h), 1.35f)
+                    drawLine(Color.White.copy(alpha = 0.52f), Offset(w * 0.12f, h * 0.12f), Offset(w * 0.88f, h * 0.12f), 0.8f)
                 }
             }
     )
@@ -92,15 +110,58 @@ fun ContactlessNfcWaves(tint: Color) {
 fun SecurityHologramSticker(accentColor: Color = Color(0xFFB8C6CC)) {
     Box(
         modifier = Modifier
-            .size(width = 48.dp, height = 30.dp)
-            .clip(RoundedCornerShape(6.dp))
-            .background(Brush.linearGradient(listOf(accentColor.copy(alpha = 0.95f), Color.White, accentColor.copy(alpha = 0.65f), Color(0xFF727B83))))
-            .border(0.8.dp, Color.White.copy(alpha = 0.7f), RoundedCornerShape(6.dp)),
+            .size(width = 49.dp, height = 31.dp)
+            .clip(RoundedCornerShape(5.dp))
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        Color(0xFF6D83A8),
+                        Color(0xFFE9D9F4),
+                        Color(0xFF79C9C0),
+                        Color(0xFFF2D58C),
+                        Color(0xFF8D9ED0),
+                        accentColor
+                    )
+                )
+            )
+            .border(0.9.dp, Color.White.copy(alpha = 0.82f), RoundedCornerShape(5.dp))
+            .drawWithCache {
+                val band = Stroke(width = 1.0f)
+                onDrawBehind {
+                    // Iridescent foil bands and fine security rings.
+                    for (i in 0..7) {
+                        val x = size.width * (i / 7f)
+                        drawLine(
+                            color = listOf(
+                                Color.Cyan, Color.Magenta, Color.Yellow, Color.White
+                            )[i % 4].copy(alpha = 0.22f),
+                            start = Offset(x - size.height * 0.45f, 0f),
+                            end = Offset(x + size.height * 0.45f, size.height),
+                            strokeWidth = size.width * 0.055f
+                        )
+                    }
+                    for (i in 1..4) {
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.34f),
+                            radius = size.minDimension * (i * 0.105f),
+                            center = Offset(size.width * 0.5f, size.height * 0.5f),
+                            style = band
+                        )
+                    }
+                    drawRoundRect(
+                        color = Color.White.copy(alpha = 0.55f),
+                        topLeft = Offset(size.width * 0.045f, size.height * 0.08f),
+                        size = Size(size.width * 0.91f, size.height * 0.84f),
+                        cornerRadius = CornerRadius(4f),
+                        style = band
+                    )
+                }
+            },
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = "SECURE",
-            color = Color.Black.copy(alpha = 0.7f),
+            color = Color(0xFF17202B).copy(alpha = 0.86f),
             fontSize = 7.sp,
             fontWeight = FontWeight.Black,
             letterSpacing = 1.sp
