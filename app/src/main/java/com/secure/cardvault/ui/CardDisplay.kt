@@ -238,8 +238,7 @@ fun UltraLuxury3DBankCard(
                     numberGroups = numberGroups,
                     cleanDigits = cleanDigits,
                     revealed = revealed,
-                    accentColor = finish.accent,
-                    finishName = finish.name
+                    accentColor = finish.accent
                 )
             } else {
                 CardBackFace(
