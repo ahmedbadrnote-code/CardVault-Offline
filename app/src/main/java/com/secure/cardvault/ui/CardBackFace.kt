@@ -25,7 +25,8 @@ internal fun CardBackFace(
     card: CardEntity,
     contentColor: Color,
     subColor: Color,
-    revealed: Boolean
+    revealed: Boolean,
+    accentColor: Color
 ) {
     Column(
         modifier = Modifier
