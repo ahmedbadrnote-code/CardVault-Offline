@@ -29,8 +29,7 @@ internal fun CardFrontFace(
     numberGroups: List<String>,
     cleanDigits: String,
     revealed: Boolean,
-    accentColor: Color,
-    finishName: String
+    accentColor: Color
 ) {
     Column(
         modifier = Modifier
@@ -68,11 +67,11 @@ internal fun CardFrontFace(
                 border = BorderStroke(0.8.dp, contentColor.copy(alpha = 0.35f))
             ) {
                 Text(
-                    text = "${card.cardType.uppercase()} • ${finishName.uppercase()}",
+                    text = card.cardType.uppercase(),
                     color = contentColor,
                     fontSize = 8.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 1.2.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.5.sp,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 )
             }
