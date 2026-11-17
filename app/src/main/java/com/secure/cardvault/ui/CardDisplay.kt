@@ -31,7 +31,8 @@ import androidx.compose.ui.unit.sp
 import com.secure.cardvault.data.CardEntity
 import com.secure.cardvault.utils.isValidLuhnNumber
 
-// Embossed number styling.\ninternal val EmbossedNumberTextStyle = TextStyle(
+// Embossed number styling.
+internal val EmbossedNumberTextStyle = TextStyle(
     fontFamily = FontFamily.Monospace,
     fontWeight = FontWeight.ExtraBold,
     fontSize = 21.sp,
