@@ -162,7 +162,7 @@ fun CardFormDialog(
                     }
                 }
 
-                Text("Metallic Card Finish (12 Luxury Styles):", color = MutedWhite, fontSize = 11.sp)
+                Text("Choose Card Design (12 Original Styles):", color = MutedWhite, fontSize = 11.sp)
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     AllCardFinishes.chunked(2).forEach { rowFinishes ->
                         Row(
