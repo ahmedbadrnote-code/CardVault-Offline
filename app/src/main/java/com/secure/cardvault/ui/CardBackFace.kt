@@ -31,7 +31,7 @@ internal fun CardBackFace(
             .padding(vertical = 15.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // The magnetic stripe is inset from the card edges, as on many physical cards.
+        // Magnetic stripe inset from the card edges.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -67,7 +67,7 @@ internal fun CardBackFace(
                 .border(0.5.dp, Color(0xFF3B3E40), RoundedCornerShape(1.dp))
         )
 
-        // One continuous signature strip: the security code is printed on its right end.
+        // Signature strip with a distinct, high-contrast CVV print area.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -81,7 +81,6 @@ internal fun CardBackFace(
                 )
                 .drawWithCache {
                     onDrawBehind {
-                        // Fine security ruling, kept subtle like printed signature stock.
                         for (i in 0..6) {
                             val y = size.height * (0.12f + i * 0.12f)
                             drawLine(
@@ -93,7 +92,7 @@ internal fun CardBackFace(
                         }
                     }
                 }
-                .padding(horizontal = 9.dp, vertical = 4.dp),
+                .padding(horizontal = 7.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(
@@ -115,30 +114,37 @@ internal fun CardBackFace(
                 )
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
             Column(
+                modifier = Modifier
+                    .width(58.dp)
+                    .height(34.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color(0xFFFFFFFF))
+                    .border(0.7.dp, Color(0xFFB8B8B4), RoundedCornerShape(2.dp))
+                    .padding(horizontal = 5.dp, vertical = 2.dp),
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
                     text = "CVV",
-                    color = Color(0xFF666666),
-                    fontSize = 6.sp,
+                    color = Color(0xFF555555),
+                    fontSize = 7.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.5.sp
                 )
                 Text(
-                    text = if (revealed) card.cvv else "•••",
-                    color = Color(0xFF222222),
-                    fontSize = 13.sp,
+                    text = if (revealed) card.cvv.trim().ifBlank { "—" } else "•••",
+                    color = Color(0xFF111111),
+                    fontSize = 14.sp,
                     fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Black
+                    fontWeight = FontWeight.Black,
+                    maxLines = 1
                 )
             }
         }
 
-        // Keep the lower reverse intentionally quiet; real cards avoid decorative clutter.
         Spacer(modifier = Modifier.height(2.dp))
     }
 }
