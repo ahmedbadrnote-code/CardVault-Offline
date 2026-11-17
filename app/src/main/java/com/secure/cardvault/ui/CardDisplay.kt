@@ -110,7 +110,52 @@ fun UltraLuxury3DBankCard(
                             }
                             3 -> for (x in 1..12) for (y in 1..6) drawCircle(patternColor, 1.2f, Offset(step * x * 0.72f, step * y * 0.72f))
                             4 -> drawPath(diagonal, sheenColor)
-                            else -> for (i in 1..8) drawLine(patternColor, Offset(0f, step * i), Offset(size.width, step * i), 1.0f)
+                            5 -> for (i in 1..8) drawLine(patternColor, Offset(0f, step * i), Offset(size.width, step * i), 1.0f)
+                            6 -> {
+                                for (x in 0..8) for (y in 0..4) {
+                                    val cx = step * x * 1.05f
+                                    val cy = step * y * 1.05f
+                                    val hex = Path().apply {
+                                        for (point in 0..5) {
+                                            val angle = Math.PI / 3.0 * point
+                                            val px = cx + (step * 0.34f * kotlin.math.cos(angle)).toFloat()
+                                            val py = cy + (step * 0.34f * kotlin.math.sin(angle)).toFloat()
+                                            if (point == 0) moveTo(px, py) else lineTo(px, py)
+                                        }
+                                        close()
+                                    }
+                                    drawPath(hex, patternColor, style = strokeStyle)
+                                }
+                            }
+                            7 -> for (i in 1..9) drawArc(patternColor, -35f, 70f, false, Offset(size.width * 0.72f - step * i, size.height * 0.5f - step * i), Size(step * i * 2f, step * i * 2f), style = strokeStyle)
+                            8 -> {
+                                for (i in -8..14) {
+                                    drawLine(patternColor, Offset(i * step, 0f), Offset(i * step - size.height, size.height), 0.8f)
+                                    drawLine(patternColor, Offset(i * step, size.height), Offset(i * step - size.height, 0f), 0.8f)
+                                }
+                            }
+                            9 -> {
+                                for (i in 1..5) {
+                                    val inset = step * i * 0.42f
+                                    drawRoundRect(patternColor, Offset(inset, inset), Size(size.width - inset * 2f, size.height - inset * 2f), CornerRadius(step * 0.22f), style = strokeStyle)
+                                }
+                            }
+                            10 -> {
+                                for (i in 1..5) {
+                                    val y = step * i
+                                    drawLine(patternColor, Offset(0f, y), Offset(size.width * 0.25f, y), 1.1f)
+                                    drawLine(patternColor, Offset(size.width * 0.25f, y), Offset(size.width * 0.34f, y + step * 0.45f), 1.1f)
+                                    drawLine(patternColor, Offset(size.width * 0.34f, y + step * 0.45f), Offset(size.width, y + step * 0.45f), 1.1f)
+                                    drawCircle(sheenColor, 2.2f, Offset(size.width * 0.25f, y))
+                                }
+                            }
+                            else -> {
+                                for (i in 1..5) {
+                                    val inset = step * i * 0.5f
+                                    drawArc(patternColor, 180f, 90f, false, Offset(inset, inset), Size(step * 2f, step * 2f), style = strokeStyle)
+                                    drawArc(patternColor, 0f, 90f, false, Offset(size.width - inset - step * 2f, size.height - inset - step * 2f), Size(step * 2f, step * 2f), style = strokeStyle)
+                                }
+                            }
                         }
                         drawPath(diagonal, sheenColor.copy(alpha = 0.55f))
                         drawRoundRect(
