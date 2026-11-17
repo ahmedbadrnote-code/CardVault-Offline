@@ -25,11 +25,23 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Decode Release Signing Keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/cardvault-release.jks"
+          test -s "$RUNNER_TEMP/cardvault-release.jks"
+          echo "KEYSTORE_FILE=$RUNNER_TEMP/cardvault-release.jks" >> "$GITHUB_ENV"
+
       - name: Setup Gradle and Build Release APK
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: '8.6'
-          arguments: assembleRelease
+        env:
+          KEYSTORE_FILE: ${{ runner.temp }}/cardvault-release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Upload Compiled Release APK Artifact
         uses: actions/upload-artifact@v4
@@ -95,9 +107,23 @@ android.nonTransitiveRClass=true
     id("com.google.devtools.ksp")
 }
 
+val signingStoreFile = System.getenv("KEYSTORE_FILE")
+val signingStorePassword = System.getenv("KEYSTORE_PASSWORD")
+val signingKeyAlias = System.getenv("KEY_ALIAS")
+val signingKeyPassword = System.getenv("KEY_PASSWORD")
+
 android {
     namespace = "com.secure.cardvault"
     compileSdk = 34
+
+    signingConfigs {
+        create("release") {
+            storeFile = signingStoreFile?.let { file(it) }
+            storePassword = signingStorePassword
+            keyAlias = signingKeyAlias
+            keyPassword = signingKeyPassword
+        }
+    }
 
     defaultConfig {
         applicationId = "com.secure.cardvault"
@@ -121,7 +147,7 @@ android {
             isShrinkResources = true
             isDebuggable = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
         debug {
             isMinifyEnabled = false
