@@ -126,16 +126,34 @@ internal fun CardBackFace(
                     .padding(horizontal = 4.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = if (revealed) card.cvv.trim().ifBlank { "—" } else "•••",
-                    color = Color(0xFF111111),
-                    fontSize = 15.sp,
-                    lineHeight = 17.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Black,
-                    maxLines = 1,
-                    softWrap = false
-                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    androidx.compose.foundation.text.BasicText(
+                        text = "CVV",
+                        style = androidx.compose.ui.text.TextStyle(
+                            color = Color(0xFF444444),
+                            fontSize = 7.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.7.sp
+                        ),
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                    androidx.compose.foundation.text.BasicText(
+                        text = if (revealed) card.cvv.trim().ifBlank { "—" } else "•••",
+                        style = androidx.compose.ui.text.TextStyle(
+                            color = Color(0xFF111111),
+                            fontSize = 14.sp,
+                            lineHeight = 16.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Black
+                        ),
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                }
             }
         }
 
