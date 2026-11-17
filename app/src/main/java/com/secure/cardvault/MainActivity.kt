@@ -212,49 +212,6 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-@Composable
-fun LockedScreen(onUnlockRequest: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(PitchBlack)
-            .padding(32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = Icons.Default.Lock,
-            contentDescription = "Locked",
-            tint = CrispWhite,
-            modifier = Modifier.size(72.dp)
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        Text(
-            text = "VAULT LOCKED",
-            color = CrispWhite,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 2.sp
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "100% Offline • SQLCipher AES-256",
-            color = MutedWhite,
-            fontSize = 13.sp
-        )
-        Spacer(modifier = Modifier.height(32.dp))
-        OutlinedButton(
-            onClick = onUnlockRequest,
-            border = BorderStroke(1.dp, CrispWhite),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = CrispWhite),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Icon(Icons.Default.Fingerprint, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("UNLOCK VAULT", fontWeight = FontWeight.SemiBold)
-        }
-    }
-}
 
 @Composable
 fun VaultAppScreen(
