@@ -89,7 +89,7 @@ fun ContactlessNfcWaves(tint: Color) {
 }
 
 @Composable
-fun SecurityHologramSticker() {
+fun SecurityHologramSticker(accentColor: Color = Color(0xFFB8C6CC)) {
     Box(
         modifier = Modifier
             .size(width = 48.dp, height = 30.dp)
