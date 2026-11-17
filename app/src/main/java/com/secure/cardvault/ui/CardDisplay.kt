@@ -29,53 +29,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.secure.cardvault.data.CardEntity
-import com.secure.cardvault.utils.isValidLuhnNumber
 
-// Card finish brushes and embossed number styling.
-private val BrushPitchBlack = Brush.linearGradient(
-    colors = listOf(Color(0xFF282828), Color(0xFF101010), Color(0xFF050505), Color(0xFF1E1E1E))
-)
-private val BrushCarbonGray = Brush.linearGradient(
-    colors = listOf(Color(0xFF2A2E33), Color(0xFF16191D), Color(0xFF0D0F12), Color(0xFF202428))
-)
-private val BrushTitaniumSilver = Brush.linearGradient(
-    colors = listOf(Color(0xFF8E959E), Color(0xFF5A616B), Color(0xFF3F444C), Color(0xFF747C87))
-)
-private val BrushNavyDark = Brush.linearGradient(
-    colors = listOf(Color(0xFF1A2639), Color(0xFF0F1722), Color(0xFF080C12), Color(0xFF15202E))
-)
-private val BrushObsidianOnyx = Brush.linearGradient(
-    colors = listOf(Color(0xFF232023), Color(0xFF121012), Color(0xFF080708), Color(0xFF1C191C))
-)
-private val BrushEmeraldGreen = Brush.linearGradient(
-    colors = listOf(Color(0xFF133829), Color(0xFF0A2118), Color(0xFF05130D), Color(0xFF184532))
-)
-private val BrushRoyalGold = Brush.linearGradient(
-    colors = listOf(Color(0xFF634F21), Color(0xFF3B2E11), Color(0xFF241B08), Color(0xFF7A6229))
-)
-private val BrushCrimsonRuby = Brush.linearGradient(
-    colors = listOf(Color(0xFF4A151B), Color(0xFF2B0B0E), Color(0xFF170507), Color(0xFF5C1A22))
-)
-private val BrushRoyalAmethyst = Brush.linearGradient(
-    colors = listOf(Color(0xFF2E1A3B), Color(0xFF1B0E24), Color(0xFF0F0714), Color(0xFF3B224C))
-)
-private val BrushCopperBronze = Brush.linearGradient(
-    colors = listOf(Color(0xFF4F2D1F), Color(0xFF2E1910), Color(0xFF1A0D08), Color(0xFF633927))
-)
-private val BrushMidnightTeal = Brush.linearGradient(
-    colors = listOf(Color(0xFF12353B), Color(0xFF0A1F24), Color(0xFF051114), Color(0xFF17434A))
-)
-private val BrushChampagneRose = Brush.linearGradient(
-    colors = listOf(Color(0xFF4F3236), Color(0xFF2E1C1E), Color(0xFF1A0F10), Color(0xFF613E42))
-)
-
-private val BrushGoldChip = Brush.linearGradient(
-    colors = listOf(Color(0xFFFFE596), Color(0xFFB38228), Color(0xFFFFF3C4), Color(0xFF8F6314))
-)
-private val BrushHologram = Brush.linearGradient(
-    colors = listOf(Color(0xFF888888), Color(0xFFE8E8E8), Color(0xFF707070), Color(0xFFFFFFFF), Color(0xFF999999))
-)
-
+// Embossed number styling.
 internal val EmbossedNumberTextStyle = TextStyle(
     fontFamily = FontFamily.Monospace,
     fontWeight = FontWeight.ExtraBold,
@@ -100,28 +55,11 @@ fun UltraLuxury3DBankCard(
         label = "Card3DFlip"
     )
 
-    val isLuhnValid = remember(card.cardNumber) { isValidLuhnNumber(card.cardNumber) }
-
-    val cardBrush = remember(card.themeContrast) {
-        when {
-            card.themeContrast.equals("Carbon Gray", ignoreCase = true) -> BrushCarbonGray
-            card.themeContrast.equals("Titanium Silver", ignoreCase = true) -> BrushTitaniumSilver
-            card.themeContrast.equals("Navy Dark", ignoreCase = true) -> BrushNavyDark
-            card.themeContrast.equals("Obsidian Onyx", ignoreCase = true) -> BrushObsidianOnyx
-            card.themeContrast.equals("Emerald Green", ignoreCase = true) -> BrushEmeraldGreen
-            card.themeContrast.equals("Royal Gold", ignoreCase = true) -> BrushRoyalGold
-            card.themeContrast.equals("Crimson Ruby", ignoreCase = true) -> BrushCrimsonRuby
-            card.themeContrast.equals("Royal Amethyst", ignoreCase = true) -> BrushRoyalAmethyst
-            card.themeContrast.equals("Copper Bronze", ignoreCase = true) -> BrushCopperBronze
-            card.themeContrast.equals("Midnight Teal", ignoreCase = true) -> BrushMidnightTeal
-            card.themeContrast.equals("Champagne Rose", ignoreCase = true) -> BrushChampagneRose
-            else -> BrushPitchBlack
-        }
-    }
-
-    val contentColor = CrispWhite
-    val subColor = Color(0xFFB0B0B0)
-    val rimColor = Color(0xFF484848)
+    val finish = remember(card.themeContrast) { cardFinishStyle(card.themeContrast) }
+    val cardBrush = remember(finish) { Brush.linearGradient(finish.gradient) }
+    val contentColor = finish.foreground
+    val subColor = finish.secondary
+    val rimColor = finish.rim
 
     val cleanDigits = remember(card.cardNumber) { card.cardNumber.replace(" ", "") }
     val numberGroups = remember(cleanDigits, revealed) {
@@ -147,28 +85,138 @@ fun UltraLuxury3DBankCard(
                 .background(cardBrush)
                 .border(1.4.dp, rimColor, RoundedCornerShape(20.dp))
                 .drawWithCache {
-                    val patternColor = Color.White.copy(alpha = 0.032f)
-                    val sheenColor = Color.White.copy(alpha = 0.028f)
-                    val strokeStyle = Stroke(width = 1.2f)
-                    val centerOffset = Offset(size.width * 0.85f, size.height * 0.50f)
-                    val baseRadius = size.minDimension * 0.14f
-                    val sheenPath = Path().apply {
-                        moveTo(0f, size.height * 0.35f)
-                        lineTo(size.width * 0.65f, 0f)
-                        lineTo(size.width * 0.90f, 0f)
-                        lineTo(0f, size.height * 0.65f)
+                    val patternColor = finish.foreground.copy(alpha = 0.075f)
+                    val sheenColor = finish.accent.copy(alpha = 0.10f)
+                    val strokeStyle = Stroke(width = 1.05f)
+                    val step = size.minDimension / 9f
+                    val diagonal = Path().apply {
+                        moveTo(0f, size.height * 0.30f)
+                        lineTo(size.width * 0.58f, 0f)
+                        lineTo(size.width * 0.82f, 0f)
+                        lineTo(0f, size.height * 0.72f)
                         close()
                     }
                     onDrawBehind {
-                        for (r in 1..7) {
+                        when (finish.texture) {
+                            0 -> for (r in 1..7) drawCircle(patternColor, step * r, Offset(size.width * 0.86f, size.height * 0.5f), style = strokeStyle)
+                            1 -> for (i in -8..14) drawLine(patternColor, Offset(i * step, 0f), Offset(i * step - size.height, size.height), 1.1f)
+                            2 -> {
+                                for (i in 1..8) {
+                                    drawLine(patternColor, Offset(step * i, 0f), Offset(step * i, size.height), 0.8f)
+                                    drawLine(patternColor, Offset(0f, step * i), Offset(size.width, step * i), 0.8f)
+                                }
+                            }
+                            3 -> for (x in 1..12) for (y in 1..6) drawCircle(patternColor, 1.2f, Offset(step * x * 0.72f, step * y * 0.72f))
+                            4 -> drawPath(diagonal, sheenColor)
+                            5 -> for (i in 1..8) drawLine(patternColor, Offset(0f, step * i), Offset(size.width, step * i), 1.0f)
+                            6 -> {
+                                for (x in 0..8) for (y in 0..4) {
+                                    val cx = step * x * 1.05f
+                                    val cy = step * y * 1.05f
+                                    val hex = Path().apply {
+                                        for (point in 0..5) {
+                                            val angle = Math.PI / 3.0 * point
+                                            val px = cx + (step * 0.34f * kotlin.math.cos(angle)).toFloat()
+                                            val py = cy + (step * 0.34f * kotlin.math.sin(angle)).toFloat()
+                                            if (point == 0) moveTo(px, py) else lineTo(px, py)
+                                        }
+                                        close()
+                                    }
+                                    drawPath(hex, patternColor, style = strokeStyle)
+                                }
+                            }
+                            7 -> for (i in 1..9) drawArc(patternColor, -35f, 70f, false, Offset(size.width * 0.72f - step * i, size.height * 0.5f - step * i), Size(step * i * 2f, step * i * 2f), style = strokeStyle)
+                            8 -> {
+                                for (i in -8..14) {
+                                    drawLine(patternColor, Offset(i * step, 0f), Offset(i * step - size.height, size.height), 0.8f)
+                                    drawLine(patternColor, Offset(i * step, size.height), Offset(i * step - size.height, 0f), 0.8f)
+                                }
+                            }
+                            9 -> {
+                                for (i in 1..5) {
+                                    val inset = step * i * 0.42f
+                                    drawRoundRect(patternColor, Offset(inset, inset), Size(size.width - inset * 2f, size.height - inset * 2f), CornerRadius(step * 0.22f), style = strokeStyle)
+                                }
+                            }
+                            10 -> {
+                                for (i in 1..5) {
+                                    val y = step * i
+                                    drawLine(patternColor, Offset(0f, y), Offset(size.width * 0.25f, y), 1.1f)
+                                    drawLine(patternColor, Offset(size.width * 0.25f, y), Offset(size.width * 0.34f, y + step * 0.45f), 1.1f)
+                                    drawLine(patternColor, Offset(size.width * 0.34f, y + step * 0.45f), Offset(size.width, y + step * 0.45f), 1.1f)
+                                    drawCircle(sheenColor, 2.2f, Offset(size.width * 0.25f, y))
+                                }
+                            }
+                            else -> {
+                                for (i in 1..5) {
+                                    val inset = step * i * 0.5f
+                                    drawArc(patternColor, 180f, 90f, false, Offset(inset, inset), Size(step * 2f, step * 2f), style = strokeStyle)
+                                    drawArc(patternColor, 0f, 90f, false, Offset(size.width - inset - step * 2f, size.height - inset - step * 2f), Size(step * 2f, step * 2f), style = strokeStyle)
+                                }
+                            }
+                        }
+                        // Layered studio lighting, fine material grain and a restrained machined bevel.
+                        drawRect(
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.15f),
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.19f)
+                                ),
+                                start = Offset(0f, 0f),
+                                end = Offset(size.width * 0.72f, size.height)
+                            )
+                        )
+                        drawRect(
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    finish.accent.copy(alpha = 0.13f),
+                                    Color.Transparent,
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.10f)
+                                ),
+                                start = Offset(0f, size.height * 0.18f),
+                                end = Offset(size.width, size.height * 0.92f)
+                            )
+                        )
+                        // A deterministic micro-grain gives matte and brushed finishes a tactile surface.
+                        for (i in 0 until 150) {
+                            val x = ((i * 73) % 997) / 997f * size.width
+                            val y = ((i * 193) % 991) / 991f * size.height
                             drawCircle(
-                                color = patternColor,
-                                radius = baseRadius * r,
-                                center = centerOffset,
-                                style = strokeStyle
+                                color = if (i % 3 == 0) Color.White.copy(alpha = 0.035f)
+                                else Color.Black.copy(alpha = 0.025f),
+                                radius = if (i % 5 == 0) 1.0f else 0.55f,
+                                center = Offset(x, y)
                             )
                         }
-                        drawPath(path = sheenPath, color = sheenColor)
+                        // Fine inner bevel: brighter on the light-facing edge, darker underneath.
+                        drawLine(
+                            color = Color.White.copy(alpha = 0.24f),
+                            start = Offset(size.width * 0.045f, size.height * 0.075f),
+                            end = Offset(size.width * 0.955f, size.height * 0.075f),
+                            strokeWidth = 1.15f
+                        )
+                        drawLine(
+                            color = Color.White.copy(alpha = 0.15f),
+                            start = Offset(size.width * 0.035f, size.height * 0.09f),
+                            end = Offset(size.width * 0.035f, size.height * 0.90f),
+                            strokeWidth = 1.0f
+                        )
+                        drawLine(
+                            color = Color.Black.copy(alpha = 0.25f),
+                            start = Offset(size.width * 0.045f, size.height * 0.94f),
+                            end = Offset(size.width * 0.955f, size.height * 0.94f),
+                            strokeWidth = 1.25f
+                        )
+                        drawPath(diagonal, sheenColor.copy(alpha = 0.55f))
+                        drawRoundRect(
+                            color = finish.accent.copy(alpha = 0.12f),
+                            topLeft = Offset(size.width * 0.018f, size.height * 0.035f),
+                            size = Size(size.width * 0.964f, size.height * 0.93f),
+                            cornerRadius = CornerRadius(size.minDimension * 0.055f),
+                            style = Stroke(width = 1.0f)
+                        )
                     }
                 }
                 .clickable(
@@ -183,16 +231,13 @@ fun UltraLuxury3DBankCard(
                     card = card,
                     contentColor = contentColor,
                     subColor = subColor,
-                    isLuhnValid = isLuhnValid,
                     numberGroups = numberGroups,
-                    cleanDigits = cleanDigits,
-                    revealed = revealed
+                    revealed = revealed,
+                    accentColor = finish.accent
                 )
             } else {
                 CardBackFace(
                     card = card,
-                    contentColor = contentColor,
-                    subColor = subColor,
                     revealed = revealed
                 )
             }
