@@ -22,24 +22,22 @@ import com.secure.cardvault.data.CardEntity
 @Composable
 internal fun CardBackFace(
     card: CardEntity,
-    contentColor: Color,
-    subColor: Color,
-    revealed: Boolean,
-    accentColor: Color
+    revealed: Boolean
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .graphicsLayer { this.rotationY = 180f }
-            .padding(vertical = 13.dp),
-        verticalArrangement = Arrangement.SpaceEvenly
+            .padding(vertical = 15.dp),
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // A realistic full-width magnetic stripe in the upper portion of the reverse.
-        Spacer(modifier = Modifier.height(5.dp))
+        // The magnetic stripe is inset from the card edges, as on many physical cards.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(43.dp)
+                .padding(horizontal = 13.dp)
+                .height(41.dp)
+                .clip(RoundedCornerShape(1.dp))
                 .background(
                     Brush.verticalGradient(
                         listOf(
@@ -53,88 +51,94 @@ internal fun CardBackFace(
                 .drawWithCache {
                     onDrawBehind {
                         drawLine(
-                            Color.White.copy(alpha = 0.18f),
+                            Color.White.copy(alpha = 0.16f),
                             Offset(0f, size.height * 0.12f),
                             Offset(size.width, size.height * 0.12f),
                             1f
                         )
                         drawLine(
-                            Color.Black.copy(alpha = 0.65f),
+                            Color.Black.copy(alpha = 0.62f),
                             Offset(0f, size.height * 0.88f),
                             Offset(size.width, size.height * 0.88f),
                             1.2f
                         )
                     }
                 }
-                .border(0.5.dp, Color(0xFF3B3E40))
+                .border(0.5.dp, Color(0xFF3B3E40), RoundedCornerShape(1.dp))
         )
 
-        // Signature panel, printed security code and hologram occupy the lower reverse.
+        // One continuous signature strip: the security code is printed on its right end.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 17.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(9.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(43.dp)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(
-                        Brush.linearGradient(
-                            listOf(Color(0xFFF8F8F5), Color(0xFFD9D9D5), Color(0xFFF1F1ED))
-                        )
+                .padding(horizontal = 20.dp)
+                .height(42.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(
+                    Brush.linearGradient(
+                        listOf(Color(0xFFF8F8F5), Color(0xFFD9D9D5), Color(0xFFF1F1ED))
                     )
-                    .drawWithCache {
-                        onDrawBehind {
-                            for (i in 0..7) {
-                                val y = size.height * (0.10f + i * 0.11f)
-                                drawLine(
-                                    Color(0xFF777777).copy(alpha = 0.13f),
-                                    Offset(size.width * 0.03f, y),
-                                    Offset(size.width * 0.97f, y),
-                                    0.55f
-                                )
-                            }
+                )
+                .drawWithCache {
+                    onDrawBehind {
+                        // Fine security ruling, kept subtle like printed signature stock.
+                        for (i in 0..6) {
+                            val y = size.height * (0.12f + i * 0.12f)
+                            drawLine(
+                                Color(0xFF777777).copy(alpha = 0.12f),
+                                Offset(size.width * 0.025f, y),
+                                Offset(size.width * 0.975f, y),
+                                0.5f
+                            )
                         }
                     }
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalArrangement = Arrangement.SpaceBetween
+                }
+                .padding(horizontal = 9.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
             ) {
                 Text(
                     text = "AUTHORIZED SIGNATURE",
                     color = Color(0xFF555555),
-                    fontSize = 7.sp,
-                    letterSpacing = 0.55.sp
+                    fontSize = 6.sp,
+                    letterSpacing = 0.45.sp
                 )
-                Spacer(modifier = Modifier.fillMaxWidth().height(1.dp))
+                Spacer(modifier = Modifier.height(4.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(Color(0xFF777777).copy(alpha = 0.48f))
+                )
             }
 
+            Spacer(modifier = Modifier.width(12.dp))
+
             Column(
-                modifier = Modifier
-                    .width(48.dp)
-                    .height(37.dp)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(Color(0xFFF7F7F4))
-                    .border(0.7.dp, Color(0xFFB8B8B2), RoundedCornerShape(3.dp)),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
+                    text = "CVV",
+                    color = Color(0xFF666666),
+                    fontSize = 6.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
+                )
+                Text(
                     text = if (revealed) card.cvv else "•••",
                     color = Color(0xFF222222),
-                    fontSize = 14.sp,
+                    fontSize = 13.sp,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Black
                 )
             }
-
-            SecurityHologramSticker(accentColor = accentColor)
         }
 
-        // No vault metadata or implementation details are printed on the physical-card surface.
-        Spacer(modifier = Modifier.height(5.dp))
+        // Keep the lower reverse intentionally quiet; real cards avoid decorative clutter.
+        Spacer(modifier = Modifier.height(2.dp))
     }
 }

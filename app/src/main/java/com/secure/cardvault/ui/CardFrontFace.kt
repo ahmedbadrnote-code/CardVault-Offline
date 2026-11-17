@@ -92,7 +92,7 @@ internal fun CardFrontFace(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 1.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically
         ) {
             numberGroups.forEach { group ->

@@ -238,10 +238,7 @@ fun UltraLuxury3DBankCard(
             } else {
                 CardBackFace(
                     card = card,
-                    contentColor = contentColor,
-                    subColor = subColor,
-                    revealed = revealed,
-                    accentColor = finish.accent
+                    revealed = revealed
                 )
             }
         }
