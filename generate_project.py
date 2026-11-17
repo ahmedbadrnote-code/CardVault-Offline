@@ -33,10 +33,13 @@ jobs:
           test -s "$RUNNER_TEMP/cardvault-release.jks"
           echo "KEYSTORE_FILE=$RUNNER_TEMP/cardvault-release.jks" >> "$GITHUB_ENV"
 
-      - name: Setup Gradle and Build Release APK
+      - name: Setup Gradle 8.6
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: '8.6'
+
+      - name: Build Signed Release APK
+        run: gradle assembleRelease
         env:
           KEYSTORE_FILE: ${{ runner.temp }}/cardvault-release.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
